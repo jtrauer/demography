@@ -184,17 +184,29 @@ if __name__ == '__main__':
     # 'kidney-failure', 'suicide', 'accidental-drowning', 'accidental-poisoning', 'assault',
     # 'land-transport-accidents', 'liver-disease']
 
+    # read population totals
     book = open_workbook('grim-' + sheet_names[0] + '-2017.xlsx')
     population_age_groups, population_years, genders, population_array, _ \
         = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
+
+    # read death spreadsheets
     age_groups, years, genders, final_array = read_all_grim_sheets(sheet_names)
 
-    # # quick example plot - absolute numbers
-    # figure = plt.figure()
-    # ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-    # for i in range(len(age_groups)):
-    #     ax.plot(years, final_array[i, :, 0, :], label=age_groups[i])
-    # handles, labels = ax.get_legend_handles_labels()
-    # leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False, prop={'size': 7})
-    # figure.savefig('test_figure')
+    # find rates from numbers
+    start_year = 1907
+    finish_year = 2014
+    denominators = population_array[:, population_years.index(start_year):population_years.index(finish_year),
+                    genders.index('Persons')]
+    numerators = final_array[:-1, years.index(start_year):years.index(finish_year), genders.index('Persons')]
+    numerators = numpy.squeeze(numerators)
+    rates = numpy.divide(numerators, denominators)
+
+    # quick example plot - absolute numbers
+    figure = plt.figure()
+    ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+    for i in range(len(age_groups) - 1):
+        ax.plot(years[years.index(start_year):years.index(finish_year)], rates[i, :], label=age_groups[i])
+    handles, labels = ax.get_legend_handles_labels()
+    leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False, prop={'size': 7})
+    figure.savefig('test_figure')
 
