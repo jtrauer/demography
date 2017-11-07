@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="5dc07f7a-0466-4728-9591-81e71f495eab" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/grim_reader.py" afterPath="$PROJECT_DIR$/grim_reader.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -21,12 +20,13 @@
       <file leaf-file-name="grim_reader.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/grim_reader.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="396">
-              <caret line="100" column="0" lean-forward="true" selection-start-line="100" selection-start-column="0" selection-end-line="100" selection-end-column="0" />
+            <state relative-caret-position="249">
+              <caret line="157" column="35" lean-forward="true" selection-start-line="157" selection-start-column="35" selection-end-line="157" selection-end-column="35" />
               <folding>
                 <element signature="e#1#31#0" expanded="true" />
-                <element signature="e#134#832#0" expanded="false" />
-                <element signature="e#888#1473#0" expanded="false" />
+                <element signature="e#135#833#0" expanded="false" />
+                <element signature="e#889#1474#0" expanded="false" />
+                <element signature="e#1533#3576#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -57,6 +57,9 @@
       <find>sheet.col_values(c)[5]</find>
       <find>sheet.col_values(c)</find>
       <find>array</find>
+      <find>sheet_names</find>
+      <find>n</find>
+      <find>name</find>
     </findStrings>
     <replaceStrings>
       <replace>title</replace>
@@ -302,11 +305,11 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.29979253" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.31327802" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.31327802" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.41286308" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.41286308" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -321,11 +324,12 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="21" />
+      <option name="time" value="39" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
         <watch expression="grim_all_causes_male.values" />
+        <watch expression="working_array['Females'][0:19] [8]" />
       </configuration>
     </watches-manager>
   </component>
@@ -336,8 +340,9 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#1#31#0" expanded="true" />
-            <element signature="e#134#832#0" expanded="false" />
-            <element signature="e#888#1473#0" expanded="false" />
+            <element signature="e#135#833#0" expanded="false" />
+            <element signature="e#889#1474#0" expanded="false" />
+            <element signature="e#1533#3576#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -348,8 +353,9 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#1#31#0" expanded="true" />
-            <element signature="e#134#832#0" expanded="false" />
-            <element signature="e#888#1473#0" expanded="false" />
+            <element signature="e#135#833#0" expanded="false" />
+            <element signature="e#889#1474#0" expanded="false" />
+            <element signature="e#1533#3576#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -360,8 +366,9 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="e#1#31#0" expanded="true" />
-            <element signature="e#134#832#0" expanded="false" />
-            <element signature="e#888#1473#0" expanded="false" />
+            <element signature="e#135#833#0" expanded="false" />
+            <element signature="e#889#1474#0" expanded="false" />
+            <element signature="e#1533#3576#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -376,12 +383,13 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/grim_reader.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="396">
-          <caret line="100" column="0" lean-forward="true" selection-start-line="100" selection-start-column="0" selection-end-line="100" selection-end-column="0" />
+        <state relative-caret-position="249">
+          <caret line="157" column="35" lean-forward="true" selection-start-line="157" selection-start-column="35" selection-end-line="157" selection-end-column="35" />
           <folding>
             <element signature="e#1#31#0" expanded="true" />
-            <element signature="e#134#832#0" expanded="false" />
-            <element signature="e#888#1473#0" expanded="false" />
+            <element signature="e#135#833#0" expanded="false" />
+            <element signature="e#889#1474#0" expanded="false" />
+            <element signature="e#1533#3576#0" expanded="false" />
           </folding>
         </state>
       </provider>
