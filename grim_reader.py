@@ -195,18 +195,23 @@ if __name__ == '__main__':
     # find rates from numbers
     start_year = 1907
     finish_year = 2014
-    denominators = population_array[:, population_years.index(start_year):population_years.index(finish_year),
-                    genders.index('Persons')]
-    numerators = final_array[:-1, years.index(start_year):years.index(finish_year), genders.index('Persons')]
-    numerators = numpy.squeeze(numerators)
-    rates = numpy.divide(numerators, denominators)
 
-    # quick example plot - absolute numbers
-    figure = plt.figure()
-    ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-    for i in range(len(age_groups) - 1):
-        ax.plot(years[years.index(start_year):years.index(finish_year)], rates[i, :], label=age_groups[i])
-    handles, labels = ax.get_legend_handles_labels()
-    leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False, prop={'size': 7})
-    figure.savefig('test_figure')
+    for gender in genders:
+        denominators = population_array[:, population_years.index(start_year):population_years.index(finish_year),
+                        genders.index(gender)]
+        numerators = final_array[:-1, years.index(start_year):years.index(finish_year), genders.index(gender)]
+        numerators = numpy.squeeze(numerators)
+        rates = numpy.divide(numerators, denominators)
+
+        # quick example plot - absolute numbers
+        figure = plt.figure()
+        ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+        for i in range(len(age_groups) - 1):
+            ax.plot(years[years.index(start_year):years.index(finish_year)], rates[i, :], label=age_groups[i])
+        handles, labels = ax.get_legend_handles_labels()
+        leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                        prop={'size': 7})
+        ax.set_title(gender)
+        ax.set_ylim((0., 0.35))
+        figure.savefig('mortality_figure_' + gender)
 

@@ -20,8 +20,8 @@
       <file leaf-file-name="grim_reader.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/grim_reader.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="0">
-              <caret line="0" column="0" lean-forward="true" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+            <state relative-caret-position="323">
+              <caret line="214" column="29" lean-forward="false" selection-start-line="214" selection-start-column="29" selection-end-line="214" selection-end-column="29" />
               <folding>
                 <element signature="e#1#31#0" expanded="true" />
                 <element signature="e#167#865#0" expanded="false" />
@@ -322,7 +322,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="53" />
+      <option name="time" value="54" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
@@ -419,8 +419,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/grim_reader.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="true" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        <state relative-caret-position="323">
+          <caret line="214" column="29" lean-forward="false" selection-start-line="214" selection-start-column="29" selection-end-line="214" selection-end-column="29" />
           <folding>
             <element signature="e#1#31#0" expanded="true" />
             <element signature="e#167#865#0" expanded="false" />
