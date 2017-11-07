@@ -1,6 +1,7 @@
 
 from xlrd import open_workbook
 import numpy
+import matplotlib.pyplot as plt
 
 
 def remove_element_from_unicode(unicode_string, element_number, insertion_element):
@@ -41,12 +42,27 @@ def convert_to_integer_if_possible(values_list):
     return values_found
 
 
-def read_grim_sheet(workbook, years_to_keep=None):
+def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5, gender_row_index=3):
+    """
+    Function to read a single GRIM-formatted spreadsheet.
+
+    Args:
+        workbook: The entire spreadsheet
+        sheet_name: String of the sheet of the book to be read
+        years_to_keep: List of Booleans for the years of interest, only created when the all mortality sheet read
+        title_row_index: Integer for the row with the titles in it
+        gender_row_index: Integer for the row with the gender strings in it
+    Returns:
+        age_groups: List of the age groups strings
+        years: List of the year integers
+        genders: List of the strings for the genders
+        final_array: The main array containing the data
+        years_to_keep: Boolean structure corresponding to the years to be kept if it is all-cause mortality being read
+    """
 
     # initialise
-    sheet = workbook.sheet_by_name('Deaths')
+    sheet = workbook.sheet_by_name(sheet_name)
     data_type = []
-    title_row_index = 5
     titles = {}
     working_array = {}
     gender = 'start'
@@ -56,8 +72,8 @@ def read_grim_sheet(workbook, years_to_keep=None):
     for c in range(sheet.ncols):
 
         # update first level of dictionary indices if necessary, the "data type"
-        if sheet.col_values(c)[3] != u'':
-            gender = str(sheet.col_values(c)[3])
+        if sheet.col_values(c)[gender_row_index] != u'':
+            gender = str(sheet.col_values(c)[gender_row_index])
             new_layer = True
         data_type.append(gender)
 
@@ -87,7 +103,8 @@ def read_grim_sheet(workbook, years_to_keep=None):
     # depth stack the arrays created above
     age_groups = titles['Persons']
     genders = []
-    final_array = numpy.array(numpy.zeros(shape=(working_array['Persons'].shape[0], working_array['Persons'].shape[1], 0)))
+    final_array \
+        = numpy.array(numpy.zeros(shape=(working_array['Persons'].shape[0], working_array['Persons'].shape[1], 0)))
     for gender in working_array:
         final_array = numpy.dstack((final_array, working_array[gender]))
         genders.append(gender)
@@ -126,7 +143,8 @@ def read_all_grim_sheets(sheet_names):
         book = open_workbook('grim-' + name + '-2017.xlsx')
 
         # read with reading function above
-        age_groups, years, genders, sheet_array, years_to_keep = read_grim_sheet(book, years_to_keep=years_to_keep)
+        age_groups, years, genders, sheet_array, years_to_keep \
+            = read_grim_sheet(book, 'Deaths', years_to_keep=years_to_keep)
         if name == sheet_names[0]: final_array = numpy.array(numpy.zeros(shape=list(sheet_array.shape) + [0L]))
         sheet_array = numpy.expand_dims(sheet_array, axis=3)
 
@@ -135,34 +153,48 @@ def read_all_grim_sheets(sheet_names):
 
     return age_groups, years, genders, final_array
 
+
 if __name__ == '__main__':
 
     # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
-    sheet_names = ['all-causes-combined',
-                   'all-certain-conditions-originating-in-the-perinatal-period',
-                   'all-certain-infectious-and-parasitic-diseases',
-                   'all-diseases-of-the-circulatory-system',
-                   'all-congenital-malformations-deformations-and-chromosomal-abnormalities',
-                   'all-diseases-of-the-blood-and-blood-forming-organs',
-                   'all-diseases-of-the-digestive-system',
-                   'all-diseases-of-the-ear-and-mastoid-process',
-                   'all-diseases-of-the-eye-and-adnexa',
-                   'all-diseases-of-the-genitourinary-system',
-                   'all-diseases-of-the-musculoskeletal-system-and-connective-tissue',
-                   'all-diseases-of-the-nervous-system',
-                   'all-diseases-of-the-respiratory-system',
-                   'all-diseases-of-the-skin-and-subcutaneous-tissue',
-                   'all-endocrine-nutritional-and-metabolic-diseases',
-                   'all-external-causes-of-morbidity-and-mortality',
-                   'all-mental-and-behavioural-disorders',
-                   'all-neoplasms',
-                   'all-pregnancy-childbirth-and-the-puerperium',
-                   'all-symptoms-signs-and-abnormal-clinical-and-laboratory-findings-not-elsewhere-classified',
-                   'asthma', 'breast-cancer', 'chronic-kidney-disease', 'colorectal-cancer',
-                   'chronic-obstructive-pulmonary-disease', 'coronary-heart-disease', 'diabetes', 'heart-failure',
-                   'lung-cancer', 'melanoma', 'osteoarthritis', 'osteoporosis', 'prostate-cancer', 'rheumatoid-arthritis',
-                   'stroke', 'cerebrovascular-disease', 'dementia-and-alzheimer-disease', 'hypertensive-disease',
-                   'kidney-failure', 'suicide', 'accidental-drowning', 'accidental-poisoning', 'assault',
-                   'land-transport-accidents', 'liver-disease']
+    sheet_names = ['all-causes-combined']
+    # 'all-certain-conditions-originating-in-the-perinatal-period',
+    # 'all-certain-infectious-and-parasitic-diseases',
+    # 'all-diseases-of-the-circulatory-system',
+    # 'all-congenital-malformations-deformations-and-chromosomal-abnormalities',
+    # 'all-diseases-of-the-blood-and-blood-forming-organs',
+    # 'all-diseases-of-the-digestive-system',
+    # 'all-diseases-of-the-ear-and-mastoid-process',
+    # 'all-diseases-of-the-eye-and-adnexa',
+    # 'all-diseases-of-the-genitourinary-system',
+    # 'all-diseases-of-the-musculoskeletal-system-and-connective-tissue',
+    # 'all-diseases-of-the-nervous-system',
+    # 'all-diseases-of-the-respiratory-system',
+    # 'all-diseases-of-the-skin-and-subcutaneous-tissue',
+    # 'all-endocrine-nutritional-and-metabolic-diseases',
+    # 'all-external-causes-of-morbidity-and-mortality',
+    # 'all-mental-and-behavioural-disorders',
+    # 'all-neoplasms',
+    # 'all-pregnancy-childbirth-and-the-puerperium',
+    # 'all-symptoms-signs-and-abnormal-clinical-and-laboratory-findings-not-elsewhere-classified',
+    # 'asthma', 'breast-cancer', 'chronic-kidney-disease', 'colorectal-cancer',
+    # 'chronic-obstructive-pulmonary-disease', 'coronary-heart-disease', 'diabetes', 'heart-failure',
+    # 'lung-cancer', 'melanoma', 'osteoarthritis', 'osteoporosis', 'prostate-cancer', 'rheumatoid-arthritis',
+    # 'stroke', 'cerebrovascular-disease', 'dementia-and-alzheimer-disease', 'hypertensive-disease',
+    # 'kidney-failure', 'suicide', 'accidental-drowning', 'accidental-poisoning', 'assault',
+    # 'land-transport-accidents', 'liver-disease']
+
+    book = open_workbook('grim-' + sheet_names[0] + '-2017.xlsx')
+    population_age_groups, population_years, genders, population_array, _ \
+        = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
     age_groups, years, genders, final_array = read_all_grim_sheets(sheet_names)
+
+    # # quick example plot - absolute numbers
+    # figure = plt.figure()
+    # ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+    # for i in range(len(age_groups)):
+    #     ax.plot(years, final_array[i, :, 0, :], label=age_groups[i])
+    # handles, labels = ax.get_legend_handles_labels()
+    # leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False, prop={'size': 7})
+    # figure.savefig('test_figure')
 
