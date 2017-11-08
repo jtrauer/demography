@@ -157,7 +157,11 @@ def read_all_grim_sheets(sheet_names):
 if __name__ == '__main__':
 
     # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
-    sheet_names = ['all-causes-combined']
+    sheet_names = ['all-causes-combined',
+                   'all-external-causes-of-morbidity-and-mortality',
+                   'all-diseases-of-the-circulatory-system',
+                   'all-neoplasms']
+
     # 'all-certain-conditions-originating-in-the-perinatal-period',
     # 'all-certain-infectious-and-parasitic-diseases',
     # 'all-diseases-of-the-circulatory-system',
@@ -198,12 +202,12 @@ if __name__ == '__main__':
 
     for gender in genders:
         denominators = population_array[:, population_years.index(start_year):population_years.index(finish_year),
-                        genders.index(gender)]
-        numerators = final_array[:-1, years.index(start_year):years.index(finish_year), genders.index(gender)]
-        numerators = numpy.squeeze(numerators)
+                                        genders.index(gender)]
+        numerators = final_array[:-1, years.index(start_year):years.index(finish_year), genders.index(gender),
+                                 sheet_names.index('all-causes-combined')]
         rates = numpy.divide(numerators, denominators)
 
-        # quick example plot - absolute numbers
+        # quick example plot - mortality rates by age group
         figure = plt.figure()
         ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
         for i in range(len(age_groups) - 1):
