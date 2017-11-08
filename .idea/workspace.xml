@@ -21,8 +21,8 @@
       <file leaf-file-name="grim_reader.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/grim_reader.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="206">
-              <caret line="204" column="40" lean-forward="false" selection-start-line="204" selection-start-column="40" selection-end-line="204" selection-end-column="40" />
+            <state relative-caret-position="34">
+              <caret line="176" column="0" lean-forward="true" selection-start-line="176" selection-start-column="0" selection-end-line="176" selection-end-column="0" />
               <folding>
                 <element signature="e#1#31#0" expanded="true" />
                 <element signature="e#167#865#0" expanded="false" />
@@ -326,11 +326,11 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/grim_reader.py</url>
-          <line>202</line>
-          <option name="timeStamp" value="54" />
+          <line>264</line>
+          <option name="timeStamp" value="56" />
         </line-breakpoint>
       </breakpoints>
-      <option name="time" value="55" />
+      <option name="time" value="57" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
@@ -434,8 +434,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/grim_reader.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="206">
-          <caret line="204" column="40" lean-forward="false" selection-start-line="204" selection-start-column="40" selection-end-line="204" selection-end-column="40" />
+        <state relative-caret-position="34">
+          <caret line="176" column="0" lean-forward="true" selection-start-line="176" selection-start-column="0" selection-end-line="176" selection-end-column="0" />
           <folding>
             <element signature="e#1#31#0" expanded="true" />
             <element signature="e#167#865#0" expanded="false" />

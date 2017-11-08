@@ -154,6 +154,19 @@ def read_all_grim_sheets(sheet_names):
     return age_groups, years, genders, final_array
 
 
+def convert_grim_string(string_to_convert):
+
+    conversion_dictionary \
+        = {'all-external-causes-of-morbidity-and-mortality': 'External causes',
+           'all-diseases-of-the-circulatory-system': 'Circulatory diseases',
+           'all-neoplasms': 'Neoplasms'}
+
+    if string_to_convert in conversion_dictionary:
+        return conversion_dictionary[string_to_convert]
+    else:
+        return string_to_convert
+
+
 if __name__ == '__main__':
 
     # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
@@ -205,6 +218,7 @@ if __name__ == '__main__':
                                         genders.index(gender)]
         numerators = final_array[:-1, years.index(start_year):years.index(finish_year), genders.index(gender),
                                  sheet_names.index('all-causes-combined')]
+
         rates = numpy.divide(numerators, denominators)
 
         # quick example plot - mortality rates by age group
@@ -217,5 +231,35 @@ if __name__ == '__main__':
                         prop={'size': 7})
         ax.set_title(gender)
         ax.set_ylim((0., 0.35))
+        plt.setp(ax.get_xticklabels(), fontsize=10)
+        plt.setp(ax.get_yticklabels(), fontsize=10)
         figure.savefig('mortality_figure_' + gender)
 
+    # deaths by causes
+    denominators = numpy.sum(population_array[:, population_years.index(start_year):population_years.index(finish_year),
+                             genders.index('Persons')], axis=0)
+    numerators = {}
+    rates = {}
+    causes \
+        = ['all-external-causes-of-morbidity-and-mortality', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
+    for cause in causes:
+        numerators[cause] = numpy.sum(final_array[:-1, years.index(start_year):years.index(finish_year),
+                                      genders.index('Persons'), sheet_names.index(cause)], axis=0)
+        rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
+
+    figure = plt.figure()
+    ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+    for cause in causes:
+        ax.plot(years[years.index(start_year):years.index(finish_year)], rates[cause], label=convert_grim_string(cause))
+    handles, labels = ax.get_legend_handles_labels()
+    leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                    prop={'size': 7})
+    ax.set_title('Deaths rates by cause')
+    ax.set_ylim((0., 5e-3))
+    ax.set_xlabel('Year', fontsize=10)
+    ax.set_ylabel('Rate per capita per year', fontsize=10)
+    plt.setp(ax.get_xticklabels(), fontsize=10)
+    plt.setp(ax.get_yticklabels(), fontsize=10)
+    figure.savefig('mortality_figure_cause')
+
+    print
