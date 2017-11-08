@@ -262,4 +262,3 @@ if __name__ == '__main__':
     plt.setp(ax.get_yticklabels(), fontsize=10)
     figure.savefig('mortality_figure_cause')
 
-    print
