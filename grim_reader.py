@@ -30,7 +30,7 @@ def convert_to_integer_if_possible(values_list):
     Args:
         values_list: The list to be interrogated
     Returns:
-        valuse_found: The list after processing as a list of integers
+        values_found: The list after processing as a list of integers
     """
 
     values_found = []
@@ -78,7 +78,7 @@ def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5,
         data_type.append(gender)
 
         # find second level of dictionary indices, i.e. the "title"
-        title = remove_element_from_unicode(sheet.col_values(c)[title_row_index], 8211, u'to')
+        title = remove_element_from_unicode(sheet.col_values(c)[title_row_index], 8211, u' to ')
 
         # process column values
         column_values = convert_to_integer_if_possible(sheet.col_values(c)[title_row_index:])
@@ -155,6 +155,14 @@ def read_all_grim_sheets(sheet_names):
 
 
 def convert_grim_string(string_to_convert):
+    """
+    Just a function to access a dictionary of string conversions. Will gradually build out as we need to for outputting.
+
+    Args:
+        string_to_convert: The raw input string that isn't nicely formatted
+    Returns:
+        The converted string
+    """
 
     conversion_dictionary \
         = {'all-external-causes-of-morbidity-and-mortality': 'External causes',
@@ -208,13 +216,14 @@ if __name__ == '__main__':
     population_age_groups, population_years, genders, population_array, _ \
         = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
 
-    # read death spreadsheets
+    # read death data spreadsheets
     age_groups, years, genders, final_array = read_all_grim_sheets(sheet_names)
 
-    # find rates from numbers
+    # specify time range
     start_year = 1907
     finish_year = 2014
 
+    # create graph of total death rates by age groups over time
     for gender in genders:
         denominators = population_array[:, population_years.index(start_year):population_years.index(finish_year),
                                         genders.index(gender)]
@@ -237,8 +246,8 @@ if __name__ == '__main__':
         plt.setp(ax.get_yticklabels(), fontsize=10)
         figure.savefig('mortality_figure_' + gender)
 
-    # deaths by causes
-    for upper_age_limit in ['70to74', '75to79']:
+    # deaths by cause with limitation by age group
+    for upper_age_limit in ['70 to 74', '75 to 79']:
         denominators = numpy.sum(population_array[:, population_years.index(start_year):population_years.index(finish_year),
                                  genders.index('Persons')], axis=0)
         numerators = {}
