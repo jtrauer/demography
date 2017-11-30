@@ -175,6 +175,31 @@ def convert_grim_string(string_to_convert):
         return string_to_convert
 
 
+def distribute_missing_across_agegroups(final_array, age_groups):
+    """
+    Distribute the missing data proportionately across age groups. Note that is typically less than 0.1% of all data,
+    but probably still better to do to improve the sense of the absolute rates of death.
+
+    Args:
+        final_array: The final data array
+        age_groups: List of age groups, so that the Missing one can be indexed (although it's always the last one)
+    Returns:
+        adjusted_for_missing_array: Array structured as final_array was, but with no missing column and adjusted age
+            group values
+    """
+
+    adjusted_for_missing_array \
+        = numpy.zeros([final_array.shape[0] - 1, final_array.shape[1], final_array.shape[2], final_array.shape[3]])
+    for y in range(final_array.shape[1]):
+        for g in range(final_array.shape[2]):
+            for c in range(final_array.shape[3]):
+                prop_missing = final_array[age_groups.index('Missing'), y, g, c] \
+                               / sum(final_array[:age_groups.index('Missing'), y, g, c])
+                adjusted_for_missing_array[:, y, g, c] \
+                    = final_array[:age_groups.index('Missing'), y, g, c] * (1. + prop_missing)
+    return adjusted_for_missing_array
+
+
 if __name__ == '__main__':
 
     # first dimension is age groups, second is years, third is gender, fourth is cause of death
@@ -223,11 +248,14 @@ if __name__ == '__main__':
     start_year = 1907
     finish_year = 2014
 
+    adjusted_array = distribute_missing_across_agegroups(final_array, age_groups)
+
+
     # create graph of total death rates by age groups over time
     for gender in genders:
         denominators = population_array[:, population_years.index(start_year):population_years.index(finish_year),
                                         genders.index(gender)]
-        numerators = final_array[:-1, years.index(start_year):years.index(finish_year), genders.index(gender),
+        numerators = adjusted_array[:, years.index(start_year):years.index(finish_year), genders.index(gender),
                                  sheet_names.index('all-causes-combined')]
 
         rates = numpy.divide(numerators, denominators)
@@ -255,7 +283,7 @@ if __name__ == '__main__':
         causes \
             = ['all-external-causes-of-morbidity-and-mortality', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
         for cause in causes:
-            numerators[cause] = numpy.sum(final_array[:age_groups.index(upper_age_limit),
+            numerators[cause] = numpy.sum(adjusted_array[:age_groups.index(upper_age_limit),
                                           years.index(start_year):years.index(finish_year),
                                           genders.index('Persons'), sheet_names.index(cause)], axis=0)
             rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
