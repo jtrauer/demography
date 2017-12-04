@@ -348,7 +348,7 @@ if __name__ == '__main__':
     integer_ages = []
 
     # construct life tables and cumulative death structures for each calendar year
-    for year in range(start_year, finish_year):
+    for year in range(start_year, finish_year + 1):
 
         # the life table list and the running value to populate it
         survival_total = 1.
@@ -381,7 +381,7 @@ if __name__ == '__main__':
     n_plots, rows, columns, base_font_size = 5, 2, 3, 8
     plt.style.use('ggplot')
     for n_plot in range(n_plots):
-        year = 2025 + n_plot * 15 - n_plots * 15
+        year = 2029 + n_plot * 15 - n_plots * 15
         ax = figure.add_subplot(rows, columns, n_plot + 1)
         stacked_data = {'base': numpy.zeros(len(life_tables[year])),
                         'survival': life_tables[year],
