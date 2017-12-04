@@ -337,6 +337,7 @@ if __name__ == '__main__':
     life_tables = {}
     cumulative_deaths_by_cause = {}
     rates_for_life_tables = {}
+    integer_ages = []
 
     # construct life tables and cumulative death structures for each calendar year
     for year in range(start_year, finish_year):
@@ -364,11 +365,14 @@ if __name__ == '__main__':
                         survival_total *= 1. - rate
                         life_tables[year].append(survival_total)
                     integer_age = age_group * 5 + i
+                    if year == start_year and cause == sheet_names[0]:
+                        integer_ages.append(integer_age)
+
                     cumulative_deaths += life_tables[year][integer_age] * rate
                     cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
         # plot data and tidy plot
-        ax.plot(life_tables[year])
+        ax.plot(integer_ages, life_tables[year][:-1])
     handles, labels = ax.get_legend_handles_labels()
     leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                     prop={'size': 7})
