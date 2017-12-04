@@ -293,54 +293,59 @@ if __name__ == '__main__':
     population_array_relevant_years = restrict_population_to_relevant_years(population_array, years)
     rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years, len(sheet_names))
 
-    # # create graph of total death rates by age groups over time
-    # for gender in genders:
-    #
-    #     # quick example plot - mortality rates by age group
-    #     figure = plt.figure()
-    #     ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-    #     for i in range(len(age_groups) - 1):
-    #         ax.plot(range(years.index(start_year), years.index(finish_year) + 1),
-    #                 rates[i, years.index(start_year):years.index(finish_year) + 1,
-    #                 genders.index(gender), sheet_names.index('all-causes-combined')], label=age_groups[i])
-    #     handles, labels = ax.get_legend_handles_labels()
-    #     leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-    #                     prop={'size': 7})
-    #     ax.set_title(gender)
-    #     ax.set_ylim((0., 0.35))
-    #     plt.setp(ax.get_xticklabels(), fontsize=10)
-    #     plt.setp(ax.get_yticklabels(), fontsize=10)
-    #     figure.savefig('mortality_figure_' + gender)
-    #
-    # # deaths by cause with limitation by age group
-    # for upper_age_limit in ['70 to 74', '75 to 79']:
-    #     denominators \
-    #         = numpy.sum(population_array[:, population_years.index(start_year):population_years.index(finish_year) + 1,
-    #                     genders.index('Persons')], axis=0)
-    #     numerators = {}
-    #     rates = {}
-    #     causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
-    #     for cause in causes:
-    #         numerators[cause] = numpy.sum(adjusted_array[:age_groups.index(upper_age_limit),
-    #                                       years.index(start_year):years.index(finish_year) + 1,
-    #                                       genders.index('Persons'), sheet_names.index(cause)], axis=0)
-    #         rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
-    #
-    #     figure = plt.figure()
-    #     ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-    #     for cause in causes:
-    #         ax.plot(years[years.index(start_year):years.index(finish_year) + 1],
-    #                 rates[cause], label=convert_grim_string(cause))
-    #     handles, labels = ax.get_legend_handles_labels()
-    #     leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-    #                     prop={'size': 7})
-    #     ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
-    #     ax.set_ylim((0., 3e-3))
-    #     ax.set_xlabel('Year', fontsize=10)
-    #     ax.set_ylabel('Rate per capita per year', fontsize=10)
-    #     plt.setp(ax.get_xticklabels(), fontsize=10)
-    #     plt.setp(ax.get_yticklabels(), fontsize=10)
-    #     figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
+    # create graph of total death rates by age groups over time
+    for gender in genders:
+
+        # quick example plot - mortality rates by age group
+        figure = plt.figure()
+        ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+        for i in range(len(age_groups) - 1):
+            ax.plot(range(years.index(start_year), years.index(finish_year) + 1),
+                    rates[i, years.index(start_year):years.index(finish_year) + 1,
+                    genders.index(gender), sheet_names.index('all-causes-combined')], label=age_groups[i])
+        handles, labels = ax.get_legend_handles_labels()
+        leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                        prop={'size': 7})
+        ax.set_title(gender)
+        ax.set_ylim((0., 0.35))
+        plt.setp(ax.get_xticklabels(), fontsize=10)
+        plt.setp(ax.get_yticklabels(), fontsize=10)
+        figure.savefig('mortality_figure_' + gender)
+
+    # deaths by cause with limitation by age group
+    for upper_age_limit in ['70 to 74', '75 to 79']:
+        denominators \
+            = numpy.sum(population_array[:, population_years.index(start_year):population_years.index(finish_year) + 1,
+                        genders.index('Persons')], axis=0)
+        numerators = {}
+        rates = {}
+        causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
+        for cause in causes:
+            numerators[cause] = numpy.sum(adjusted_array[:age_groups.index(upper_age_limit),
+                                          years.index(start_year):years.index(finish_year) + 1,
+                                          genders.index('Persons'), sheet_names.index(cause)], axis=0)
+            rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
+
+        figure = plt.figure()
+        ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+        for cause in causes:
+            ax.plot(years[years.index(start_year):years.index(finish_year) + 1],
+                    rates[cause], label=convert_grim_string(cause))
+        handles, labels = ax.get_legend_handles_labels()
+        leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                        prop={'size': 7})
+        ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
+        ax.set_ylim((0., 3e-3))
+        ax.set_xlabel('Year', fontsize=10)
+        ax.set_ylabel('Rate per capita per year', fontsize=10)
+        plt.setp(ax.get_xticklabels(), fontsize=10)
+        plt.setp(ax.get_yticklabels(), fontsize=10)
+        figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
+
+    # adjust for missing data, restrict population array to relevant years and calculate rates
+    adjusted_array = distribute_missing_across_agegroups(final_array, age_groups)
+    population_array_relevant_years = restrict_population_to_relevant_years(population_array, years)
+    rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years, len(sheet_names))
 
     figure = plt.figure()
     life_tables = {}
