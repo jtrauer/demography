@@ -334,39 +334,43 @@ if __name__ == '__main__':
     figure = plt.figure()
     figure_1 = plt.figure()
     ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-    ax_1 = figure_1.add_axes([0.1, 0.1, 0.6, 0.75])
     life_tables = {}
     cumulative_deaths_by_cause = {}
     rates_for_life_tables = {}
+
+    # construct life tables and cumulative death structures for each calendar year
     for year in range(start_year, finish_year):
-        life_tables[year] = [1.]
+
+        # the life table list and the running value to populate it
         survival_total = 1.
+        life_tables[year] = [1.]
+
+        # the cumulative death structures and the value to populate it, by cause of death
         cumulative_deaths_by_cause[year] = {}
         rates_for_life_tables[year] = {}
         for cause in sheet_names:
             cumulative_deaths_by_cause[year][cause] = [0.]
             cumulative_deaths = 0.
+
+            # looping over each age group
             for age_group in range(rates.shape[0]):
+
+                # find the applicable rate
                 rate = rates[age_group, years.index(year), genders.index('Persons'), sheet_names.index(cause)]
+
+                # applying it for each individual age in years
                 for i in range(5):
                     if cause == 'all-causes-combined':
                         survival_total *= 1. - rate
                         life_tables[year].append(survival_total)
-                    cumulative_deaths += life_tables[year][age_group * 5 + i] * rate
+                    integer_age = age_group * 5 + i
+                    cumulative_deaths += life_tables[year][integer_age] * rate
                     cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
+        # plot data and tidy plot
         ax.plot(life_tables[year])
-        ax_1.plot(cumulative_deaths_by_cause[year]['all-causes-combined'])
     handles, labels = ax.get_legend_handles_labels()
     leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                     prop={'size': 7})
-    # ax.set_title('')
-    # ax.set_ylim((0., 3e-3))
-    # ax.set_xlabel('', fontsize=10)
-    # ax.set_ylabel('', fontsize=10)
     figure.savefig('lifetable')
-    figure_1.savefig('cumdeath')
 
-
-
-    print
