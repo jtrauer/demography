@@ -200,28 +200,34 @@ def distribute_missing_across_agegroups(final_array, age_groups):
     return adjusted_for_missing_array
 
 
-def find_rates_from_deaths_and_populations(death_array, pop_array, years, pop_years, n_sheets, start_year, finish_year):
+def find_rates_from_deaths_and_populations(death_array, pop_array, n_sheets):
     """
     Divides the matrix of numbers of deaths by the population matrix.
 
     Args:
         death_array: Array of deaths, which should be adjusted such that "Missing" age category isn't present
         pop_array: Array of total population numbers to be used as denominator
-        years: List of available years for deaths array
-        pop_years: List of available years for population array
         n_sheets: The number of spreadsheets read in to apply this function to
-        start_year: The first calendar year of interest
-        finish_year: The last calendar year of interest
     Returns:
         rates_array: The array of death rates per year
     """
 
     rates_array = numpy.zeros_like(death_array)
-    for s in range(n_sheets):
-        rates_array[:, :, :, s] \
-            = numpy.divide(death_array[:, years.index(start_year):years.index(finish_year) + 1, :, s],
-                           pop_array[:, pop_years.index(start_year):pop_years.index(finish_year) + 1, :])
+    for s in range(n_sheets): rates_array[:, :, :, s] = numpy.divide(death_array[:, :, :, s], pop_array)
     return rates_array
+
+
+def restrict_population_to_relevant_years(pop_array, data_years):
+    """
+    Restrict the population array (which comes from the GRIM data with more years than the death data come with) to the
+    years that are relevant to the death data being read in.
+
+    Args:
+        pop_array: The full, unrestricted population array
+        data_years: The years that are applicable from the death data array
+    """
+
+    return pop_array[:, population_years.index(data_years[0]):population_years.index(data_years[-1]) + 1, :]
 
 
 if __name__ == '__main__':
@@ -271,25 +277,21 @@ if __name__ == '__main__':
     start_year = 1907
     finish_year = 2014
 
+    # adjust for missing data, restrict population array to relevant years and calculate rates
     adjusted_array = distribute_missing_across_agegroups(final_array, age_groups)
-
-    rates = find_rates_from_deaths_and_populations(adjusted_array, population_array, years, population_years,
-                                                   len(sheet_names), start_year, finish_year)
+    population_array_relevant_years = restrict_population_to_relevant_years(population_array, years)
+    rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years, len(sheet_names))
 
     # create graph of total death rates by age groups over time
     for gender in genders:
-        denominators = population_array[:, population_years.index(start_year):population_years.index(finish_year) + 1,
-                                        genders.index(gender)]
-        numerators = adjusted_array[:, years.index(start_year):years.index(finish_year) + 1, genders.index(gender),
-                                 sheet_names.index('all-causes-combined')]
-
-        rates = numpy.divide(numerators, denominators)
 
         # quick example plot - mortality rates by age group
         figure = plt.figure()
         ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
         for i in range(len(age_groups) - 1):
-            ax.plot(years[years.index(start_year):years.index(finish_year) + 1], rates[i, :], label=age_groups[i])
+            ax.plot(range(years.index(start_year), years.index(finish_year) + 1),
+                    rates[i, years.index(start_year):years.index(finish_year) + 1,
+                    genders.index(gender), sheet_names.index('all-causes-combined')], label=age_groups[i])
         handles, labels = ax.get_legend_handles_labels()
         leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                         prop={'size': 7})
