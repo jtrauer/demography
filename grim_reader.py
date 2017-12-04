@@ -230,6 +230,17 @@ def restrict_population_to_relevant_years(pop_array, data_years):
     return pop_array[:, population_years.index(data_years[0]):population_years.index(data_years[-1]) + 1, :]
 
 
+def find_string_from_dict(string, capitalise=True):
+
+    string_dictionary = {'all-diseases-of-the-circulatory-system': 'cardiovascular disease',
+                         'all-neoplasms': 'cancer'}
+    string_to_return = string_dictionary[string] if string in string_dictionary else string
+    if capitalise:
+        return string_to_return[0].upper() + string_to_return[1:]
+    else:
+        return string_to_return
+
+
 if __name__ == '__main__':
 
     # first dimension is age groups, second is years, third is gender, fourth is cause of death
@@ -332,7 +343,6 @@ if __name__ == '__main__':
     #     figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
 
     figure = plt.figure()
-    ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
     life_tables = {}
     cumulative_deaths_by_cause = {}
     integer_ages = []
@@ -367,29 +377,39 @@ if __name__ == '__main__':
                     cumulative_deaths += life_tables[year][integer_age] * rate
                     cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
-    stacked_data = {'base': numpy.zeros(len(life_tables[2010])),
-                       'life_table': life_tables[2010],
-                       'top': numpy.ones(len(life_tables[2010]))}
-    ordered_list_of_stacks = ['base', 'life_table']
-    new_data = life_tables[2010]
-    for cause in cumulative_deaths_by_cause[2010]:
-        if cause != 'all-causes-combined':
-            new_data = [i + j for i, j in zip(new_data, cumulative_deaths_by_cause[2010][cause])]
-            stacked_data[cause] = new_data
-            ordered_list_of_stacks.append(cause)
-    ordered_list_of_stacks.append('top')
-    colours = ['b', 'r', 'g', 'y', 'm']
-    for i in range(1, len(ordered_list_of_stacks)):
-        ax.fill_between(integer_ages,
-                        stacked_data[ordered_list_of_stacks[i - 1]][:-1],
-                        stacked_data[ordered_list_of_stacks[i]][:-1], color=colours[i])
-
-
-    handles, labels = ax.get_legend_handles_labels()
-    leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-                    prop={'size': 7})
+    # plot cumulative survival graphs by year and age
+    n_plots, rows, columns, base_font_size = 5, 2, 3, 8
+    plt.style.use('ggplot')
+    for n_plot in range(n_plots):
+        year = 2025 + n_plot * 15 - n_plots * 15
+        ax = figure.add_subplot(rows, columns, n_plot + 1)
+        stacked_data = {'base': numpy.zeros(len(life_tables[year])),
+                        'survival': life_tables[year],
+                        'other causes': numpy.ones(len(life_tables[year]))}
+        ordered_list_of_stacks = ['base', 'survival']
+        new_data = life_tables[year]
+        for cause in cumulative_deaths_by_cause[year]:
+            if cause != 'all-causes-combined':
+                new_data = [i + j for i, j in zip(new_data, cumulative_deaths_by_cause[year][cause])]
+                stacked_data[cause] = new_data
+                ordered_list_of_stacks.append(cause)
+        ordered_list_of_stacks.append('other causes')
+        for i in range(1, len(ordered_list_of_stacks)):
+            ax.fill_between(integer_ages,
+                            stacked_data[ordered_list_of_stacks[i - 1]][:-1],
+                            stacked_data[ordered_list_of_stacks[i]][:-1],
+                            color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
+                            label=find_string_from_dict(ordered_list_of_stacks[i]))
+        handles, labels = ax.get_legend_handles_labels()
+        if n_plot >= columns: ax.set_xlabel('Age', fontsize=base_font_size)
+        if n_plot % columns == 0: ax.set_ylabel('Proportion', fontsize=base_font_size)
+        if n_plot == n_plots - 1:
+            ax.legend(handles, labels, bbox_to_anchor=(1.2, 1), loc=2, frameon=False, prop={'size': 9})
+        plt.setp(ax.get_xticklabels(), fontsize=base_font_size - 2)
+        plt.setp(ax.get_yticklabels(), fontsize=base_font_size - 2)
+        ax.set_title(year, fontsize=base_font_size + 2)
+        ax.set_xlim((50., 89.))
     figure.savefig('lifetable')
-
 
 
 
