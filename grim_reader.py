@@ -332,11 +332,9 @@ if __name__ == '__main__':
     #     figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
 
     figure = plt.figure()
-    figure_1 = plt.figure()
     ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
     life_tables = {}
     cumulative_deaths_by_cause = {}
-    rates_for_life_tables = {}
     integer_ages = []
 
     # construct life tables and cumulative death structures for each calendar year
@@ -348,7 +346,6 @@ if __name__ == '__main__':
 
         # the cumulative death structures and the value to populate it, by cause of death
         cumulative_deaths_by_cause[year] = {}
-        rates_for_life_tables[year] = {}
         for cause in sheet_names:
             cumulative_deaths_by_cause[year][cause] = [0.]
             cumulative_deaths = 0.
@@ -367,14 +364,33 @@ if __name__ == '__main__':
                     integer_age = age_group * 5 + i
                     if year == start_year and cause == sheet_names[0]:
                         integer_ages.append(integer_age)
-
                     cumulative_deaths += life_tables[year][integer_age] * rate
                     cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
-        # plot data and tidy plot
-        ax.plot(integer_ages, life_tables[year][:-1])
+    stacked_data = {'base': numpy.zeros(len(life_tables[2010])),
+                       'life_table': life_tables[2010],
+                       'top': numpy.ones(len(life_tables[2010]))}
+    ordered_list_of_stacks = ['base', 'life_table']
+    new_data = life_tables[2010]
+    for cause in cumulative_deaths_by_cause[2010]:
+        if cause != 'all-causes-combined':
+            new_data = [i + j for i, j in zip(new_data, cumulative_deaths_by_cause[2010][cause])]
+            stacked_data[cause] = new_data
+            ordered_list_of_stacks.append(cause)
+    ordered_list_of_stacks.append('top')
+    colours = ['b', 'r', 'g', 'y', 'm']
+    for i in range(1, len(ordered_list_of_stacks)):
+        ax.fill_between(integer_ages,
+                        stacked_data[ordered_list_of_stacks[i - 1]][:-1],
+                        stacked_data[ordered_list_of_stacks[i]][:-1], color=colours[i])
+
+
     handles, labels = ax.get_legend_handles_labels()
     leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                     prop={'size': 7})
     figure.savefig('lifetable')
+
+
+
+
 
