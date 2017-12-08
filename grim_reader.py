@@ -241,6 +241,33 @@ def find_string_from_dict(string, capitalise=True):
         return string_to_return
 
 
+def find_agegroup_values_from_strings(age_group_strings):
+    """
+    Function to extract the integer values of the age groups from their strings.
+
+    Args:
+        age_group_strings: The list containing the string descriptions of the age groups
+    Returns:
+        start_ages: The starting age for each age group
+        end_ages: The ending age for each age group
+    """
+
+    start_ages = []
+    end_ages = []
+    for age_group in age_group_strings:
+        age_group_splits = age_group.split(' ')
+        if age_group_splits[0] == '85+':
+            start_ages.append(85)
+            end_ages.append(float('inf'))
+        elif age_group_splits[0] == 'Missing':
+            start_ages.append(0)
+            end_ages.append(float('inf'))
+        else:
+            start_ages.append(int(age_group_splits[0]))
+            end_ages.append(int(age_group_splits[-1]))
+    return start_ages, end_ages
+
+
 if __name__ == '__main__':
 
     # first dimension is age groups, second is years, third is gender, fourth is cause of death
