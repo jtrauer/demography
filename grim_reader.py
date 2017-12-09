@@ -379,6 +379,27 @@ if __name__ == '__main__':
     cumulative_deaths_by_cause = {}
     integer_ages = []
 
+    age_group_lower, age_group_upper = find_agegroup_values_from_strings(age_groups)
+
+    karup_king_coefficients = {'first':
+                                   [[.344, -.208, .064],
+                                    [.248, -.056, .008],
+                                    [.176, .048, -.024],
+                                    [.128, .104, -.032],
+                                    [.104, .122, -.016]],
+                               'middle':
+                                   [[.064, .152, -.016],
+                                    [.008, .224, -.032],
+                                    [-.024, .248, -.024],
+                                    [-.032, .224, .008],
+                                    [-.016, .152, .064]],
+                               'last':
+                                   [[-.016, .112, .104],
+                                    [-.032, .104, .128],
+                                    [-.024, .048, .176],
+                                    [.008, -.056, .248],
+                                    [.064, -.208, .344]]}
+
     # construct life tables and cumulative death structures for each calendar year
     for year in range(start_year, finish_year + 1):
 
@@ -408,6 +429,26 @@ if __name__ == '__main__':
                         integer_ages.append(integer_age)
                     cumulative_deaths += life_tables[year][integer_age] * rate
                     cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
+
+        # the cumulative death structures and the value to populate it, by cause of death
+        for cause in sheet_names:
+
+            # looping over each age group
+            for age in range(90):
+                age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
+                within_group_index = age - age_group_lower[age_group_index]
+                if age_group_index == 0:
+                    group, group_start_adjustment = 'first', 0
+                elif age_group_index == len(age_groups) - 2:
+                    group, group_start_adjustment = 'last', -2
+                elif age_group_index < len(age_groups) - 2:
+                    group, group_start_adjustment = 'middle', -1
+                interpolated_rate = 0.
+                for i in range(3):
+                    interpolated_rate \
+                        += 5. * karup_king_coefficients[group][within_group_index][i] \
+                           * rates[age_group_index + i + group_start_adjustment, years.index(year),
+                                   genders.index('Persons'), sheet_names.index(cause)]
 
     # plot cumulative survival graphs by year and age
     n_plots, rows, columns, base_font_size = 5, 2, 3, 8
