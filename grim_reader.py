@@ -270,7 +270,7 @@ def find_agegroup_values_from_strings(age_group_strings):
 
 def karup_king_interpolation(group_index, within_group_index, last_age_group_index, data, age_group_width=5.):
     """
-    Method to interpolate rates to yearly intervals using the relatively simple Karup-King approach, which multiplies
+    Method to interpolate data to yearly intervals using the relatively simple Karup-King approach, which multiplies
     pre-defined coefficients by the rates in the age groups of interest and those on either side - except in the case
     where these are unavailable (i.e. the first or last) for which the closest three age groups are taken.
 
