@@ -268,6 +268,52 @@ def find_agegroup_values_from_strings(age_group_strings):
     return start_ages, end_ages
 
 
+def karup_king_interpolation(group_index, within_group_index, last_age_group_index, data, age_group_width=5.):
+    """
+    Method to interpolate rates to yearly intervals using the relatively simple Karup-King approach, which multiplies
+    pre-defined coefficients by the rates in the age groups of interest and those on either side - except in the case
+    where these are unavailable (i.e. the first or last) for which the closest three age groups are taken.
+
+    Args:
+        group_index: The index for the age group of interest
+        last_age_group_index: The index for the highest age group to be analysed
+        data: List (or one-dimensional array) for the quantities being smoothed
+        age_group_width: The number of single ages in the age group (currently has to be five)
+    Returns:
+        interpolated_estimate: The interpolated rate for the single year of interest
+    """
+
+    coefficients = {'first':
+                        [[.344, -.208, .064],
+                         [.248, -.056, .008],
+                         [.176, .048, -.024],
+                         [.128, .104, -.032],
+                         [.104, .122, -.016]],
+                    'middle':
+                        [[.064, .152, -.016],
+                         [.008, .224, -.032],
+                         [-.024, .248, -.024],
+                         [-.032, .224, .008],
+                         [-.016, .152, .064]],
+                    'last':
+                        [[-.016, .112, .104],
+                         [-.032, .104, .128],
+                         [-.024, .048, .176],
+                         [.008, -.056, .248],
+                         [.064, -.208, .344]]}
+    if group_index == 0:
+        group, group_start_adjustment = 'first', 0
+    elif group_index == last_age_group_index:
+        group, group_start_adjustment = 'last', -2
+    elif group_index < last_age_group_index:
+        group, group_start_adjustment = 'middle', -1
+    interpolated_estimate = 0.
+    for n_age_group in range(3):
+        interpolated_estimate += age_group_width * coefficients[group][within_group_index][n_age_group] \
+                             * data[group_index + n_age_group + group_start_adjustment]
+    return interpolated_estimate
+
+
 if __name__ == '__main__':
 
     # first dimension is age groups, second is years, third is gender, fourth is cause of death
@@ -381,25 +427,6 @@ if __name__ == '__main__':
 
     age_group_lower, age_group_upper = find_agegroup_values_from_strings(age_groups)
 
-    karup_king_coefficients = {'first':
-                                   [[.344, -.208, .064],
-                                    [.248, -.056, .008],
-                                    [.176, .048, -.024],
-                                    [.128, .104, -.032],
-                                    [.104, .122, -.016]],
-                               'middle':
-                                   [[.064, .152, -.016],
-                                    [.008, .224, -.032],
-                                    [-.024, .248, -.024],
-                                    [-.032, .224, .008],
-                                    [-.016, .152, .064]],
-                               'last':
-                                   [[-.016, .112, .104],
-                                    [-.032, .104, .128],
-                                    [-.024, .048, .176],
-                                    [.008, -.056, .248],
-                                    [.064, -.208, .344]]}
-
     # construct life tables and cumulative death structures for each calendar year
     for year in range(start_year, finish_year + 1):
 
@@ -436,19 +463,10 @@ if __name__ == '__main__':
             # looping over each age group
             for age in range(90):
                 age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
-                within_group_index = age - age_group_lower[age_group_index]
-                if age_group_index == 0:
-                    group, group_start_adjustment = 'first', 0
-                elif age_group_index == len(age_groups) - 2:
-                    group, group_start_adjustment = 'last', -2
-                elif age_group_index < len(age_groups) - 2:
-                    group, group_start_adjustment = 'middle', -1
-                interpolated_rate = 0.
-                for i in range(3):
-                    interpolated_rate \
-                        += 5. * karup_king_coefficients[group][within_group_index][i] \
-                           * rates[age_group_index + i + group_start_adjustment, years.index(year),
-                                   genders.index('Persons'), sheet_names.index(cause)]
+                within_group_age = age - age_group_lower[age_group_index]
+                interpolated_rate = karup_king_interpolation(
+                    age_group_index, within_group_age, 17,
+                    rates[:, years.index(year), genders.index('Persons'), sheet_names.index(cause)])
 
     # plot cumulative survival graphs by year and age
     n_plots, rows, columns, base_font_size = 5, 2, 3, 8
