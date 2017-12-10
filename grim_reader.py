@@ -384,36 +384,36 @@ if __name__ == '__main__':
         plt.setp(ax.get_xticklabels(), fontsize=10)
         plt.setp(ax.get_yticklabels(), fontsize=10)
         figure.savefig('mortality_figure_' + gender)
-
-    # deaths by cause with limitation by age group
-    for upper_age_limit in ['70 to 74', '75 to 79']:
-        denominators \
-            = numpy.sum(population_array[:, population_years.index(start_year):population_years.index(finish_year) + 1,
-                        genders.index('Persons')], axis=0)
-        numerators = {}
-        rates = {}
-        causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
-        for cause in causes:
-            numerators[cause] = numpy.sum(adjusted_array[:age_groups.index(upper_age_limit),
-                                          years.index(start_year):years.index(finish_year) + 1,
-                                          genders.index('Persons'), sheet_names.index(cause)], axis=0)
-            rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
-
-        figure = plt.figure()
-        ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-        for cause in causes:
-            ax.plot(years[years.index(start_year):years.index(finish_year) + 1],
-                    rates[cause], label=convert_grim_string(cause))
-        handles, labels = ax.get_legend_handles_labels()
-        leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-                        prop={'size': 7})
-        ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
-        ax.set_ylim((0., 3e-3))
-        ax.set_xlabel('Year', fontsize=10)
-        ax.set_ylabel('Rate per capita per year', fontsize=10)
-        plt.setp(ax.get_xticklabels(), fontsize=10)
-        plt.setp(ax.get_yticklabels(), fontsize=10)
-        figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
+    #
+    # # deaths by cause with limitation by age group
+    # for upper_age_limit in ['70 to 74', '75 to 79']:
+    #     denominators \
+    #         = numpy.sum(population_array[:, population_years.index(start_year):population_years.index(finish_year) + 1,
+    #                     genders.index('Persons')], axis=0)
+    #     numerators = {}
+    #     rates = {}
+    #     causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
+    #     for cause in causes:
+    #         numerators[cause] = numpy.sum(adjusted_array[:age_groups.index(upper_age_limit),
+    #                                       years.index(start_year):years.index(finish_year) + 1,
+    #                                       genders.index('Persons'), sheet_names.index(cause)], axis=0)
+    #         rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
+    #
+    #     figure = plt.figure()
+    #     ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+    #     for cause in causes:
+    #         ax.plot(years[years.index(start_year):years.index(finish_year) + 1],
+    #                 rates[cause], label=convert_grim_string(cause))
+    #     handles, labels = ax.get_legend_handles_labels()
+    #     leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+    #                     prop={'size': 7})
+    #     ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
+    #     ax.set_ylim((0., 3e-3))
+    #     ax.set_xlabel('Year', fontsize=10)
+    #     ax.set_ylabel('Rate per capita per year', fontsize=10)
+    #     plt.setp(ax.get_xticklabels(), fontsize=10)
+    #     plt.setp(ax.get_yticklabels(), fontsize=10)
+    #     figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
 
     # adjust for missing data, restrict population array to relevant years and calculate rates
     adjusted_array = distribute_missing_across_agegroups(final_array, age_groups)
@@ -426,6 +426,8 @@ if __name__ == '__main__':
     integer_ages = []
 
     age_group_lower, age_group_upper = find_agegroup_values_from_strings(age_groups)
+
+    karup_king = True
 
     # construct life tables and cumulative death structures for each calendar year
     for year in range(start_year, finish_year + 1):
@@ -440,33 +442,40 @@ if __name__ == '__main__':
             cumulative_deaths_by_cause[year][cause] = [0.]
             cumulative_deaths = 0.
 
-            # looping over each age group
-            for age_group in range(rates.shape[0]):
+            if karup_king:
 
-                # find the applicable rate
-                rate = rates[age_group, years.index(year), genders.index('Persons'), sheet_names.index(cause)]
-
-                # applying it for each individual age in years
-                for i in range(5):
+                # looping over each age group
+                integer_ages = range(90)
+                for age in integer_ages:
+                    age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
+                    within_group_age = age - age_group_lower[age_group_index]
+                    interpolated_rate = karup_king_interpolation(
+                        age_group_index, within_group_age, 17,
+                        rates[:, years.index(year), genders.index('Persons'), sheet_names.index(cause)])
                     if cause == 'all-causes-combined':
-                        survival_total *= 1. - rate
+                        survival_total *= 1. - interpolated_rate
                         life_tables[year].append(survival_total)
-                    integer_age = age_group * 5 + i
-                    if year == start_year and cause == sheet_names[0]:
-                        integer_ages.append(integer_age)
-                    cumulative_deaths += life_tables[year][integer_age] * rate
-                    cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
+                    else:
+                        cumulative_deaths += life_tables[year][age] * interpolated_rate
+                        cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
-        # the cumulative death structures and the value to populate it, by cause of death
-        for cause in sheet_names:
+            else:
 
-            # looping over each age group
-            for age in range(90):
-                age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
-                within_group_age = age - age_group_lower[age_group_index]
-                interpolated_rate = karup_king_interpolation(
-                    age_group_index, within_group_age, 17,
-                    rates[:, years.index(year), genders.index('Persons'), sheet_names.index(cause)])
+                for age_group in range(rates.shape[0]):
+
+                    # find the applicable rate
+                    rate = rates[age_group, years.index(year), genders.index('Persons'), sheet_names.index(cause)]
+
+                    # applying it for each individual age in years
+                    for i in range(5):
+                        if cause == 'all-causes-combined':
+                            survival_total *= 1. - rate
+                            life_tables[year].append(survival_total)
+                        integer_age = age_group * 5 + i
+                        if year == start_year and cause == sheet_names[0]:
+                            integer_ages.append(integer_age)
+                        cumulative_deaths += life_tables[year][integer_age] * rate
+                        cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
     # plot cumulative survival graphs by year and age
     n_plots, rows, columns, base_font_size = 5, 2, 3, 8
