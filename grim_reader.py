@@ -427,9 +427,8 @@ if __name__ == '__main__':
 
     age_group_lower, age_group_upper = find_agegroup_values_from_strings(age_groups)
 
-    karup_king = True
-
     # construct life tables and cumulative death structures for each calendar year
+    karup_king = False
     for year in range(start_year, finish_year + 1):
 
         # the life table list and the running value to populate it
@@ -442,40 +441,28 @@ if __name__ == '__main__':
             cumulative_deaths_by_cause[year][cause] = [0.]
             cumulative_deaths = 0.
 
-            if karup_king:
+            # looping over each age group
+            integer_ages = range(90)
+            for age in integer_ages:
+                age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
+                within_group_age = age - age_group_lower[age_group_index]
 
-                # looping over each age group
-                integer_ages = range(90)
-                for age in integer_ages:
-                    age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
-                    within_group_age = age - age_group_lower[age_group_index]
-                    interpolated_rate = karup_king_interpolation(
+                # find rate, either with Karup-King interpolation or without
+                if karup_king:
+                    rate_for_age = karup_king_interpolation(
                         age_group_index, within_group_age, 17,
                         rates[:, years.index(year), genders.index('Persons'), sheet_names.index(cause)])
-                    if cause == 'all-causes-combined':
-                        survival_total *= 1. - interpolated_rate
-                        life_tables[year].append(survival_total)
-                    else:
-                        cumulative_deaths += life_tables[year][age] * interpolated_rate
-                        cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
+                else:
+                    rate_for_age \
+                        = rates[age_group_index, years.index(year), genders.index('Persons'), sheet_names.index(cause)]
 
-            else:
-
-                for age_group in range(rates.shape[0]):
-
-                    # find the applicable rate
-                    rate = rates[age_group, years.index(year), genders.index('Persons'), sheet_names.index(cause)]
-
-                    # applying it for each individual age in years
-                    for i in range(5):
-                        if cause == 'all-causes-combined':
-                            survival_total *= 1. - rate
-                            life_tables[year].append(survival_total)
-                        integer_age = age_group * 5 + i
-                        if year == start_year and cause == sheet_names[0]:
-                            integer_ages.append(integer_age)
-                        cumulative_deaths += life_tables[year][integer_age] * rate
-                        cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
+                # decrement survival and increment cumulative deaths
+                if cause == 'all-causes-combined':
+                    survival_total *= 1. - rate_for_age
+                    life_tables[year].append(survival_total)
+                else:
+                    cumulative_deaths += life_tables[year][age] * rate_for_age
+                    cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
     # plot cumulative survival graphs by year and age
     n_plots, rows, columns, base_font_size = 5, 2, 3, 8
@@ -510,7 +497,4 @@ if __name__ == '__main__':
         ax.set_title(year, fontsize=base_font_size + 2)
         ax.set_xlim((50., 89.))
     figure.savefig('lifetable')
-
-
-
 
