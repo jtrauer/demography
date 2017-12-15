@@ -388,7 +388,7 @@ class Spring:
                                                             self.grim_books_data['population']['adjusted_data'],
                                                             len(self.grim_sheets_to_read))
 
-        # not sure of this code
+        # # not sure of this code yet
         # non_cvs_deaths \
         #     = numpy.subtract(self.grim_books_data['deaths']['adjusted_data'][
         #                      :, :, :, self.grim_sheets_to_read.index('all-causes-combined')],
@@ -398,7 +398,6 @@ class Spring:
         #     = 1. - (numpy.divide(non_cvs_deaths, self.grim_books_data['population']['adjusted_data']) / 2.)
         # self.grim_books_data['population']['without_noncvs'] \
         #     = numpy.multiply(self.grim_books_data['population']['adjusted_data'], average_surviving_prop_without_noncvs)
-        #
         # self.noncvs_rate = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
         #                                                           self.grim_books_data['population']['without_noncvs'],
         #                                                           len(self.grim_sheets_to_read))
@@ -505,6 +504,8 @@ class Outputs:
         """
         Deaths by cause with limitation by age group.
         """
+
+        # should move some of this average rate calculation code to the data processing
 
         for upper_age_limit in ['70 to 74', '75 to 79']:
             denominators \
