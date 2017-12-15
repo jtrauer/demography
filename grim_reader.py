@@ -317,6 +317,10 @@ def karup_king_interpolation(group_index, within_group_index, last_age_group_ind
 
 class Spring:
     def __init__(self):
+        """
+        Basic data processing structure that reads the input spreadsheets, processes them and can then be fed to the
+        outputs structure for graphing, etc.
+        """
 
         # for data structures, dimensions are:
         # 1. age group
