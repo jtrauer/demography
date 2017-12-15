@@ -350,6 +350,11 @@ class Spring:
         # 'kidney-failure', 'suicide', 'accidental-drowning', 'accidental-poisoning', 'assault',
         # 'land-transport-accidents', 'liver-disease']
 
+        self.integer_ages = range(90)
+
+        self.life_tables = {}
+        self.cumulative_deaths_by_cause = {}
+
         # read population totals
         book = open_workbook('grim-' + self.sheets_to_read[0] + '-2017.xlsx')
         self.population_age_groups, self.population_years, self.genders, self.population_array, _ \
@@ -360,11 +365,52 @@ class Spring:
 
         # adjust for missing data, restrict population array to relevant years and calculate rates
         self.adjusted_array = distribute_missing_across_agegroups(self.final_array, self.age_groups)
-        self.population_array_relevant_years \
+        population_array_relevant_years \
             = restrict_population_to_relevant_years(self.population_array, self.years, self.population_years)
-        self.rates \
-            = find_rates_from_deaths_and_populations(self.adjusted_array, self.population_array_relevant_years,
-                                                     len(self.sheets_to_read))
+        self.rates = find_rates_from_deaths_and_populations(self.adjusted_array, population_array_relevant_years,
+                                                            len(self.sheets_to_read))
+
+        self.find_life_tables()
+
+    def find_life_tables(self, karup_king=True):
+
+        # construct life tables and cumulative death structures for each calendar year
+        age_group_lower, age_group_upper = find_agegroup_values_from_strings(self.age_groups)
+        for year in range(self.years[0], self.years[-1] + 1):
+
+            # the life table list and the running value to populate it
+            survival_total = 1.
+            self.life_tables[year] = [1.]
+
+            # the cumulative death structures and the value to populate it, by cause of death
+            self.cumulative_deaths_by_cause[year] = {}
+            for cause in self.sheets_to_read:
+                self.cumulative_deaths_by_cause[year][cause] = [0.]
+                cumulative_deaths = 0.
+
+                # looping over each age group
+                for age in self.integer_ages:
+                    age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
+                    within_group_age = age - age_group_lower[age_group_index]
+
+                    # find rate, either with Karup-King interpolation or without
+                    if karup_king:
+                        rate_for_age = karup_king_interpolation(
+                            age_group_index, within_group_age, 17,
+                            self.rates[:, self.years.index(year), self.genders.index('Persons'),
+                            self.sheets_to_read.index(cause)])
+                    else:
+                        rate_for_age \
+                            = rates[age_group_index, self.years.index(year), self.genders.index('Persons'),
+                                    self.sheets_to_read.index(cause)]
+
+                    # decrement survival and increment cumulative deaths
+                    if cause == 'all-causes-combined':
+                        survival_total *= 1. - rate_for_age
+                        self.life_tables[year].append(survival_total)
+                    else:
+                        cumulative_deaths += self.life_tables[year][age] * rate_for_age
+                        self.cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
 
 if __name__ == '__main__':
@@ -424,78 +470,26 @@ if __name__ == '__main__':
         plt.setp(ax.get_yticklabels(), fontsize=10)
         figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
 
-    # adjust for missing data, restrict population array to relevant years and calculate rates
-    adjusted_array = distribute_missing_across_agegroups(data_object.final_array, data_object.age_groups)
-    population_array_relevant_years = restrict_population_to_relevant_years(data_object.population_array, data_object.years,
-                                                                            data_object.population_years)
-    rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years,
-                                                   len(data_object.sheets_to_read))
-
-    figure = plt.figure()
-    life_tables = {}
-    cumulative_deaths_by_cause = {}
-    integer_ages = []
-
-    age_group_lower, age_group_upper = find_agegroup_values_from_strings(data_object.age_groups)
-
-    # construct life tables and cumulative death structures for each calendar year
-    karup_king = True
-    for year in range(data_object.years[0], data_object.years[-1] + 1):
-
-        # the life table list and the running value to populate it
-        survival_total = 1.
-        life_tables[year] = [1.]
-
-        # the cumulative death structures and the value to populate it, by cause of death
-        cumulative_deaths_by_cause[year] = {}
-        for cause in data_object.sheets_to_read:
-            cumulative_deaths_by_cause[year][cause] = [0.]
-            cumulative_deaths = 0.
-
-            # looping over each age group
-            integer_ages = range(90)
-            for age in integer_ages:
-                age_group_index = next(x[0] for x in enumerate(age_group_upper) if x[1] >= age)
-                within_group_age = age - age_group_lower[age_group_index]
-
-                # find rate, either with Karup-King interpolation or without
-                if karup_king:
-                    rate_for_age = karup_king_interpolation(
-                        age_group_index, within_group_age, 17,
-                        rates[:, data_object.years.index(year), data_object.genders.index('Persons'),
-                        data_object.sheets_to_read.index(cause)])
-                else:
-                    rate_for_age \
-                        = rates[age_group_index, data_object.years.index(year), data_object.genders.index('Persons'),
-                                data_object.sheets_to_read.index(cause)]
-
-                # decrement survival and increment cumulative deaths
-                if cause == 'all-causes-combined':
-                    survival_total *= 1. - rate_for_age
-                    life_tables[year].append(survival_total)
-                else:
-                    cumulative_deaths += life_tables[year][age] * rate_for_age
-                    cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
-
     # plot cumulative survival graphs by year and age
+    figure = plt.figure()
     n_plots, rows, columns, base_font_size = 5, 2, 3, 8
     plt.style.use('ggplot')
     for n_plot in range(n_plots):
         year = 2029 + n_plot * 15 - n_plots * 15
         ax = figure.add_subplot(rows, columns, n_plot + 1)
-        stacked_data = {'base': numpy.zeros(len(life_tables[year])),
-                        'survival': life_tables[year],
-                        'other causes': numpy.ones(len(life_tables[year]))}
+        stacked_data = {'base': numpy.zeros(len(data_object.life_tables[year])),
+                        'survival': data_object.life_tables[year],
+                        'other causes': numpy.ones(len(data_object.life_tables[year]))}
         ordered_list_of_stacks = ['base', 'survival']
-        new_data = life_tables[year]
-        for cause in cumulative_deaths_by_cause[year]:
+        new_data = data_object.life_tables[year]
+        for cause in data_object.cumulative_deaths_by_cause[year]:
             if cause != 'all-causes-combined':
-                new_data = [i + j for i, j in zip(new_data, cumulative_deaths_by_cause[year][cause])]
+                new_data = [i + j for i, j in zip(new_data, data_object.cumulative_deaths_by_cause[year][cause])]
                 stacked_data[cause] = new_data
                 ordered_list_of_stacks.append(cause)
         ordered_list_of_stacks.append('other causes')
         for i in range(1, len(ordered_list_of_stacks)):
-            ax.fill_between(integer_ages,
+            ax.fill_between(data_object.integer_ages,
                             stacked_data[ordered_list_of_stacks[i - 1]][:-1],
                             stacked_data[ordered_list_of_stacks[i]][:-1],
                             color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
