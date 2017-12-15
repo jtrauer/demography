@@ -446,6 +446,13 @@ class Spring:
 
 class Outputs:
     def __init__(self, data_object):
+        """
+        Outputs module that creates plots based on the data object.
+
+        Args:
+            data_object: The data structure with death rates and other information required for plotting
+        """
+
         self.data_object = data_object
 
     def plot_death_rates_over_time(self):
@@ -453,7 +460,7 @@ class Outputs:
         Create graph of total death rates by age groups over time.
         """
 
-        for gender in data_object.grim_books_data['deaths']['genders']:
+        for gender in self.data_object.grim_books_data['deaths']['genders']:
             figure = plt.figure()
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             for i in range(len(self.data_object.grim_books_data['deaths']['age_groups']) - 1):
@@ -551,17 +558,4 @@ class Outputs:
             ax.set_title(year, fontsize=base_font_size + 2)
             ax.set_xlim((50., 89.))
         figure.savefig('lifetable')
-
-
-if __name__ == '__main__':
-
-    data_object = Spring()
-    data_object.find_life_tables()
-
-    outputs_object = Outputs(data_object)
-    outputs_object.plot_death_rates_over_time()
-    outputs_object.plot_deaths_by_cause()
-    outputs_object.plot_cumulative_survival()
-
-
 
