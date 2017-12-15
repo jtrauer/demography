@@ -377,7 +377,8 @@ class Spring:
         population_array_relevant_years = self.restrict_death_data()
 
         # find death rates from tidied arrays
-        self.rates = find_rates_from_deaths_and_populations(self.adjusted_array, population_array_relevant_years,
+        self.rates = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
+                                                            population_array_relevant_years,
                                                             len(self.grim_sheets_to_read))
 
     def restrict_death_data(self):
@@ -385,8 +386,9 @@ class Spring:
         Adjust for missing data, restrict population array to relevant years and calculate rates.
         """
 
-        self.adjusted_array = distribute_missing_across_agegroups(self.grim_books_data['deaths']['data'],
-                                                                  self.grim_books_data['deaths']['age_groups'])
+        self.grim_books_data['deaths']['adjusted_data'] \
+            = distribute_missing_across_agegroups(self.grim_books_data['deaths']['data'],
+                                                  self.grim_books_data['deaths']['age_groups'])
         return restrict_population_to_relevant_years(self.grim_books_data['population']['data'],
                                                      self.grim_books_data['deaths']['years'],
                                                      self.grim_books_data['population']['years'])
@@ -495,7 +497,7 @@ class Outputs:
             causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
             for cause in causes:
                 numerators[cause] \
-                    = numpy.sum(self.data_object.adjusted_array[
+                    = numpy.sum(self.data_object.grim_books_data['deaths']['adjusted_data'][
                                 :self.data_object.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
                                 self.data_object.grim_books_data['deaths']['genders'].index('Persons'),
                                 self.data_object.grim_sheets_to_read.index(cause)], axis=0)
