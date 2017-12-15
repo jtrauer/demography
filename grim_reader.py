@@ -217,7 +217,7 @@ def find_rates_from_deaths_and_populations(death_array, pop_array, n_sheets):
     return rates_array
 
 
-def restrict_population_to_relevant_years(pop_array, data_years):
+def restrict_population_to_relevant_years(pop_array, data_years, population_years):
     """
     Restrict the population array (which comes from the GRIM data with more years than the death data come with) to the
     years that are relevant to the death data being read in.
@@ -225,6 +225,7 @@ def restrict_population_to_relevant_years(pop_array, data_years):
     Args:
         pop_array: The full, unrestricted population array
         data_years: The years that are applicable from the death data array
+        population_years: The years available in the population matrix
     """
 
     return pop_array[:, population_years.index(data_years[0]):population_years.index(data_years[-1]) + 1, :]
@@ -314,68 +315,82 @@ def karup_king_interpolation(group_index, within_group_index, last_age_group_ind
     return interpolated_estimate
 
 
+class Spring:
+
+    def __init__(self):
+        # first dimension is age groups, second is years, third is gender, fourth is cause of death
+
+        # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
+        self.sheets_to_read = ['all-causes-combined',
+                            'all-diseases-of-the-circulatory-system',
+                            'all-neoplasms']
+        # 'all-certain-conditions-originating-in-the-perinatal-period',
+        # 'all-certain-infectious-and-parasitic-diseases',
+        # 'all-diseases-of-the-circulatory-system',
+        # 'all-congenital-malformations-deformations-and-chromosomal-abnormalities',
+        # 'all-diseases-of-the-blood-and-blood-forming-organs',
+        # 'all-diseases-of-the-digestive-system',
+        # 'all-diseases-of-the-ear-and-mastoid-process',
+        # 'all-diseases-of-the-eye-and-adnexa',
+        # 'all-diseases-of-the-genitourinary-system',
+        # 'all-diseases-of-the-musculoskeletal-system-and-connective-tissue',
+        # 'all-diseases-of-the-nervous-system',
+        # 'all-diseases-of-the-respiratory-system',
+        # 'all-diseases-of-the-skin-and-subcutaneous-tissue',
+        # 'all-endocrine-nutritional-and-metabolic-diseases',
+        # 'all-external-causes-of-morbidity-and-mortality',
+        # 'all-mental-and-behavioural-disorders',
+        # 'all-neoplasms',
+        # 'all-pregnancy-childbirth-and-the-puerperium',
+        # 'all-symptoms-signs-and-abnormal-clinical-and-laboratory-findings-not-elsewhere-classified',
+        # 'asthma', 'breast-cancer', 'chronic-kidney-disease', 'colorectal-cancer',
+        # 'chronic-obstructive-pulmonary-disease', 'coronary-heart-disease', 'diabetes', 'heart-failure',
+        # 'lung-cancer', 'melanoma', 'osteoarthritis', 'osteoporosis', 'prostate-cancer', 'rheumatoid-arthritis',
+        # 'stroke', 'cerebrovascular-disease', 'dementia-and-alzheimer-disease', 'hypertensive-disease',
+        # 'kidney-failure', 'suicide', 'accidental-drowning', 'accidental-poisoning', 'assault',
+        # 'land-transport-accidents', 'liver-disease']
+
+        # specify time range
+        self.start_year = 1907
+        self.finish_year = 2014
+
+        self.read_grim_books()
+
+        # adjust for missing data, restrict population array to relevant years and calculate rates
+        self.adjusted_array = distribute_missing_across_agegroups(self.final_array, self.age_groups)
+        self.population_array_relevant_years \
+            = restrict_population_to_relevant_years(self.population_array, self.years, self.population_years)
+        self.rates \
+            = find_rates_from_deaths_and_populations(self.adjusted_array, self.population_array_relevant_years,
+                                                     len(self.sheets_to_read))
+
+    def read_grim_books(self):
+
+        # read population totals
+        book = open_workbook('grim-' + self.sheets_to_read[0] + '-2017.xlsx')
+        self.population_age_groups, self.population_years, self.genders, self.population_array, _ \
+            = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
+
+        # read death data spreadsheets
+        self.age_groups, self.years, self.genders, self.final_array = read_all_grim_sheets(self.sheets_to_read)
+
+
 if __name__ == '__main__':
 
-    # first dimension is age groups, second is years, third is gender, fourth is cause of death
-
-    # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
-    sheet_names = ['all-causes-combined',
-                   'all-diseases-of-the-circulatory-system',
-                   'all-neoplasms']
-
-    # 'all-certain-conditions-originating-in-the-perinatal-period',
-    # 'all-certain-infectious-and-parasitic-diseases',
-    # 'all-diseases-of-the-circulatory-system',
-    # 'all-congenital-malformations-deformations-and-chromosomal-abnormalities',
-    # 'all-diseases-of-the-blood-and-blood-forming-organs',
-    # 'all-diseases-of-the-digestive-system',
-    # 'all-diseases-of-the-ear-and-mastoid-process',
-    # 'all-diseases-of-the-eye-and-adnexa',
-    # 'all-diseases-of-the-genitourinary-system',
-    # 'all-diseases-of-the-musculoskeletal-system-and-connective-tissue',
-    # 'all-diseases-of-the-nervous-system',
-    # 'all-diseases-of-the-respiratory-system',
-    # 'all-diseases-of-the-skin-and-subcutaneous-tissue',
-    # 'all-endocrine-nutritional-and-metabolic-diseases',
-    # 'all-external-causes-of-morbidity-and-mortality',
-    # 'all-mental-and-behavioural-disorders',
-    # 'all-neoplasms',
-    # 'all-pregnancy-childbirth-and-the-puerperium',
-    # 'all-symptoms-signs-and-abnormal-clinical-and-laboratory-findings-not-elsewhere-classified',
-    # 'asthma', 'breast-cancer', 'chronic-kidney-disease', 'colorectal-cancer',
-    # 'chronic-obstructive-pulmonary-disease', 'coronary-heart-disease', 'diabetes', 'heart-failure',
-    # 'lung-cancer', 'melanoma', 'osteoarthritis', 'osteoporosis', 'prostate-cancer', 'rheumatoid-arthritis',
-    # 'stroke', 'cerebrovascular-disease', 'dementia-and-alzheimer-disease', 'hypertensive-disease',
-    # 'kidney-failure', 'suicide', 'accidental-drowning', 'accidental-poisoning', 'assault',
-    # 'land-transport-accidents', 'liver-disease']
-
-    # read population totals
-    book = open_workbook('grim-' + sheet_names[0] + '-2017.xlsx')
-    population_age_groups, population_years, genders, population_array, _ \
-        = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
-
-    # read death data spreadsheets
-    age_groups, years, genders, final_array = read_all_grim_sheets(sheet_names)
-
-    # specify time range
-    start_year = 1907
-    finish_year = 2014
-
-    # adjust for missing data, restrict population array to relevant years and calculate rates
-    adjusted_array = distribute_missing_across_agegroups(final_array, age_groups)
-    population_array_relevant_years = restrict_population_to_relevant_years(population_array, years)
-    rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years, len(sheet_names))
+    analyser = Spring()
 
     # create graph of total death rates by age groups over time
-    for gender in genders:
+    for gender in analyser.genders:
 
         # quick example plot - mortality rates by age group
         figure = plt.figure()
         ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-        for i in range(len(age_groups) - 1):
-            ax.plot(range(years.index(start_year), years.index(finish_year) + 1),
-                    rates[i, years.index(start_year):years.index(finish_year) + 1,
-                    genders.index(gender), sheet_names.index('all-causes-combined')], label=age_groups[i])
+        for i in range(len(analyser.age_groups) - 1):
+            ax.plot(range(analyser.years.index(analyser.start_year), analyser.years.index(analyser.finish_year) + 1),
+                    analyser.rates[
+                    i, analyser.years.index(analyser.start_year):analyser.years.index(analyser.finish_year) + 1,
+                    analyser.genders.index(gender), analyser.sheets_to_read.index('all-causes-combined')],
+                    label=analyser.age_groups[i])
         handles, labels = ax.get_legend_handles_labels()
         leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                         prop={'size': 7})
@@ -388,21 +403,25 @@ if __name__ == '__main__':
     # deaths by cause with limitation by age group
     for upper_age_limit in ['70 to 74', '75 to 79']:
         denominators \
-            = numpy.sum(population_array[:, population_years.index(start_year):population_years.index(finish_year) + 1,
-                        genders.index('Persons')], axis=0)
+            = numpy.sum(analyser.population_array[
+                        :, analyser.population_years.index(analyser.start_year):
+                        analyser.population_years.index(analyser.finish_year) + 1,
+                        analyser.genders.index('Persons')], axis=0)
         numerators = {}
         rates = {}
         causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
         for cause in causes:
-            numerators[cause] = numpy.sum(adjusted_array[:age_groups.index(upper_age_limit),
-                                          years.index(start_year):years.index(finish_year) + 1,
-                                          genders.index('Persons'), sheet_names.index(cause)], axis=0)
+            numerators[cause] \
+                = numpy.sum(analyser.adjusted_array[:analyser.age_groups.index(upper_age_limit),
+                            analyser.years.index(analyser.start_year):analyser.years.index(analyser.finish_year) + 1,
+                            analyser.genders.index('Persons'), analyser.sheets_to_read.index(cause)], axis=0)
             rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
 
         figure = plt.figure()
         ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
         for cause in causes:
-            ax.plot(years[years.index(start_year):years.index(finish_year) + 1],
+            ax.plot(analyser.years[
+                    analyser.years.index(analyser.start_year):analyser.years.index(analyser.finish_year) + 1],
                     rates[cause], label=convert_grim_string(cause))
         handles, labels = ax.get_legend_handles_labels()
         leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
@@ -416,20 +435,22 @@ if __name__ == '__main__':
         figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
 
     # adjust for missing data, restrict population array to relevant years and calculate rates
-    adjusted_array = distribute_missing_across_agegroups(final_array, age_groups)
-    population_array_relevant_years = restrict_population_to_relevant_years(population_array, years)
-    rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years, len(sheet_names))
+    adjusted_array = distribute_missing_across_agegroups(analyser.final_array, analyser.age_groups)
+    population_array_relevant_years = restrict_population_to_relevant_years(analyser.population_array, analyser.years,
+                                                                            analyser.population_years)
+    rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years,
+                                                   len(analyser.sheets_to_read))
 
     figure = plt.figure()
     life_tables = {}
     cumulative_deaths_by_cause = {}
     integer_ages = []
 
-    age_group_lower, age_group_upper = find_agegroup_values_from_strings(age_groups)
+    age_group_lower, age_group_upper = find_agegroup_values_from_strings(analyser.age_groups)
 
     # construct life tables and cumulative death structures for each calendar year
     karup_king = True
-    for year in range(start_year, finish_year + 1):
+    for year in range(analyser.start_year, analyser.finish_year + 1):
 
         # the life table list and the running value to populate it
         survival_total = 1.
@@ -437,7 +458,7 @@ if __name__ == '__main__':
 
         # the cumulative death structures and the value to populate it, by cause of death
         cumulative_deaths_by_cause[year] = {}
-        for cause in sheet_names:
+        for cause in analyser.sheets_to_read:
             cumulative_deaths_by_cause[year][cause] = [0.]
             cumulative_deaths = 0.
 
@@ -451,10 +472,12 @@ if __name__ == '__main__':
                 if karup_king:
                     rate_for_age = karup_king_interpolation(
                         age_group_index, within_group_age, 17,
-                        rates[:, years.index(year), genders.index('Persons'), sheet_names.index(cause)])
+                        rates[:, analyser.years.index(year), analyser.genders.index('Persons'),
+                        analyser.sheets_to_read.index(cause)])
                 else:
                     rate_for_age \
-                        = rates[age_group_index, years.index(year), genders.index('Persons'), sheet_names.index(cause)]
+                        = rates[age_group_index, analyser.years.index(year), analyser.genders.index('Persons'),
+                                analyser.sheets_to_read.index(cause)]
 
                 # decrement survival and increment cumulative deaths
                 if cause == 'all-causes-combined':
