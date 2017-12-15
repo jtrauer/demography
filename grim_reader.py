@@ -4,6 +4,9 @@ import numpy
 import matplotlib.pyplot as plt
 
 
+''' static methods'''
+
+
 def remove_element_from_unicode(unicode_string, element_number, insertion_element):
     """
     Removes a specific unicode character from a unicode string and replaces it with a unicode string.
@@ -315,6 +318,9 @@ def karup_king_interpolation(group_index, within_group_index, last_age_group_ind
     return interpolated_estimate
 
 
+''' objects '''
+
+
 class Spring:
     def __init__(self):
         """
@@ -361,15 +367,12 @@ class Spring:
         self.integer_ages = range(90)
         self.life_tables = {}
         self.cumulative_deaths_by_cause = {}
-
-        # read population totals
-        book = open_workbook('grim-' + self.grim_sheets_to_read[0] + '-2017.xlsx')
-
-        # initialise data structure
         self.grim_books_data = {'population': {}, 'deaths': {}}
 
-        # add in population data
-        (_, self.grim_books_data['population']['years'], _, self.grim_books_data['population']['data'], _) \
+        # read population data
+        book = open_workbook('grim-' + self.grim_sheets_to_read[0] + '-2017.xlsx')
+        (self.grim_books_data['population']['age_groups'], self.grim_books_data['population']['years'],
+         self.grim_books_data['population']['genders'], self.grim_books_data['population']['data'], _) \
             = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
 
         # read death data spreadsheets
@@ -378,12 +381,27 @@ class Spring:
             = read_all_grim_sheets(self.grim_sheets_to_read)
 
         # restrict input array and find relevant years
-        population_array_relevant_years = self.restrict_death_data()
+        self.grim_books_data['population']['adjusted_data'] = self.restrict_death_data()
 
         # find death rates from tidied arrays
         self.rates = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
-                                                            population_array_relevant_years,
+                                                            self.grim_books_data['population']['adjusted_data'],
                                                             len(self.grim_sheets_to_read))
+
+        # not sure of this code
+        # non_cvs_deaths \
+        #     = numpy.subtract(self.grim_books_data['deaths']['adjusted_data'][
+        #                      :, :, :, self.grim_sheets_to_read.index('all-causes-combined')],
+        #                      self.grim_books_data['deaths']['adjusted_data'][
+        #                      :, :, :, self.grim_sheets_to_read.index('all-diseases-of-the-circulatory-system')])
+        # average_surviving_prop_without_noncvs \
+        #     = 1. - (numpy.divide(non_cvs_deaths, self.grim_books_data['population']['adjusted_data']) / 2.)
+        # self.grim_books_data['population']['without_noncvs'] \
+        #     = numpy.multiply(self.grim_books_data['population']['adjusted_data'], average_surviving_prop_without_noncvs)
+        #
+        # self.noncvs_rate = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
+        #                                                           self.grim_books_data['population']['without_noncvs'],
+        #                                                           len(self.grim_sheets_to_read))
 
     def restrict_death_data(self):
         """
@@ -490,11 +508,7 @@ class Outputs:
 
         for upper_age_limit in ['70 to 74', '75 to 79']:
             denominators \
-                = numpy.sum(self.data_object.grim_books_data['population']['data'][:,
-                            self.data_object.grim_books_data['population']['years'].index(
-                                self.data_object.grim_books_data['deaths']['years'][0]):
-                            self.data_object.grim_books_data['population']['years'].index(
-                                self.data_object.grim_books_data['deaths']['years'][-1]) + 1,
+                = numpy.sum(self.data_object.grim_books_data['population']['adjusted_data'][:, :,
                             self.data_object.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
             numerators = {}
             rates = {}
@@ -509,11 +523,7 @@ class Outputs:
             figure = plt.figure()
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             for cause in causes:
-                ax.plot(self.data_object.grim_books_data['deaths']['years'][
-                        self.data_object.grim_books_data['deaths']['years'].index(
-                            self.data_object.grim_books_data['deaths']['years'][0])
-                        :self.data_object.grim_books_data['deaths']['years'].index(
-                            self.data_object.grim_books_data['deaths']['years'][-1]) + 1],
+                ax.plot(self.data_object.grim_books_data['deaths']['years'],
                         rates[cause], label=convert_grim_string(cause))
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
