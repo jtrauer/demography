@@ -444,100 +444,124 @@ class Spring:
                         self.cumulative_deaths_by_cause[year][cause].append(cumulative_deaths)
 
 
+class Outputs:
+    def __init__(self, data_object):
+        self.data_object = data_object
+
+    def plot_death_rates_over_time(self):
+        """
+        Create graph of total death rates by age groups over time.
+        """
+
+        for gender in data_object.grim_books_data['deaths']['genders']:
+            figure = plt.figure()
+            ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+            for i in range(len(self.data_object.grim_books_data['deaths']['age_groups']) - 1):
+                ax.plot(range(len(self.data_object.grim_books_data['deaths']['years'])),
+                        self.data_object.rates[i, :, self.data_object.grim_books_data['deaths']['genders'].index(gender),
+                        self.data_object.grim_sheets_to_read.index('all-causes-combined')],
+                        label=self.data_object.grim_books_data['deaths']['age_groups'][i])
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                      prop={'size': 7})
+            ax.set_title(gender)
+            ax.set_ylim((0., 0.35))
+            plt.setp(ax.get_xticklabels(), fontsize=10)
+            plt.setp(ax.get_yticklabels(), fontsize=10)
+            figure.savefig('mortality_figure_' + gender)
+
+    def plot_deaths_by_cause(self):
+        """
+        Deaths by cause with limitation by age group.
+        """
+
+        for upper_age_limit in ['70 to 74', '75 to 79']:
+            denominators \
+                = numpy.sum(self.data_object.grim_books_data['population']['data'][:,
+                            self.data_object.grim_books_data['population']['years'].index(
+                                self.data_object.grim_books_data['deaths']['years'][0]):
+                            self.data_object.grim_books_data['population']['years'].index(
+                                self.data_object.grim_books_data['deaths']['years'][-1]) + 1,
+                            self.data_object.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
+            numerators = {}
+            rates = {}
+            causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
+            for cause in causes:
+                numerators[cause] \
+                    = numpy.sum(self.data_object.adjusted_array[
+                                :self.data_object.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
+                                self.data_object.grim_books_data['deaths']['genders'].index('Persons'),
+                                self.data_object.grim_sheets_to_read.index(cause)], axis=0)
+                rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
+            figure = plt.figure()
+            ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+            for cause in causes:
+                ax.plot(self.data_object.grim_books_data['deaths']['years'][
+                        self.data_object.grim_books_data['deaths']['years'].index(
+                            self.data_object.grim_books_data['deaths']['years'][0])
+                        :self.data_object.grim_books_data['deaths']['years'].index(
+                            self.data_object.grim_books_data['deaths']['years'][-1]) + 1],
+                        rates[cause], label=convert_grim_string(cause))
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                      prop={'size': 7})
+            ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
+            ax.set_ylim((0., 3e-3))
+            ax.set_xlabel('Year', fontsize=10)
+            ax.set_ylabel('Rate per capita per year', fontsize=10)
+            plt.setp(ax.get_xticklabels(), fontsize=10)
+            plt.setp(ax.get_yticklabels(), fontsize=10)
+            figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
+
+    def plot_cumulative_survival(self):
+        """
+        Plot cumulative survival graphs by year and age.
+        """
+
+        figure = plt.figure()
+        n_plots, rows, columns, base_font_size = 5, 2, 3, 8
+        plt.style.use('ggplot')
+        for n_plot in range(n_plots):
+            year = 2029 + n_plot * 15 - n_plots * 15
+            ax = figure.add_subplot(rows, columns, n_plot + 1)
+            stacked_data = {'base': numpy.zeros(len(self.data_object.life_tables[year])),
+                            'survival': self.data_object.life_tables[year],
+                            'other causes': numpy.ones(len(self.data_object.life_tables[year]))}
+            ordered_list_of_stacks = ['base', 'survival']
+            new_data = self.data_object.life_tables[year]
+            for cause in self.data_object.cumulative_deaths_by_cause[year]:
+                if cause != 'all-causes-combined':
+                    new_data = [i + j for i, j in zip(new_data, self.data_object.cumulative_deaths_by_cause[year][cause])]
+                    stacked_data[cause] = new_data
+                    ordered_list_of_stacks.append(cause)
+            ordered_list_of_stacks.append('other causes')
+            for i in range(1, len(ordered_list_of_stacks)):
+                ax.fill_between(self.data_object.integer_ages,
+                                stacked_data[ordered_list_of_stacks[i - 1]][:-1],
+                                stacked_data[ordered_list_of_stacks[i]][:-1],
+                                color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
+                                label=find_string_from_dict(ordered_list_of_stacks[i]))
+            handles, labels = ax.get_legend_handles_labels()
+            if n_plot >= columns: ax.set_xlabel('Age', fontsize=base_font_size)
+            if n_plot % columns == 0: ax.set_ylabel('Proportion', fontsize=base_font_size)
+            if n_plot == n_plots - 1:
+                ax.legend(handles, labels, bbox_to_anchor=(1.2, 1), loc=2, frameon=False, prop={'size': 9})
+            plt.setp(ax.get_xticklabels(), fontsize=base_font_size - 2)
+            plt.setp(ax.get_yticklabels(), fontsize=base_font_size - 2)
+            ax.set_title(year, fontsize=base_font_size + 2)
+            ax.set_xlim((50., 89.))
+        figure.savefig('lifetable')
+
+
 if __name__ == '__main__':
 
     data_object = Spring()
     data_object.find_life_tables()
 
-    # create graph of total death rates by age groups over time
-    for gender in data_object.grim_books_data['deaths']['genders']:
+    outputs_object = Outputs(data_object)
+    outputs_object.plot_death_rates_over_time()
+    outputs_object.plot_deaths_by_cause()
+    outputs_object.plot_cumulative_survival()
 
-        # quick example plot - mortality rates by age group
-        figure = plt.figure()
-        ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-        for i in range(len(data_object.grim_books_data['deaths']['age_groups']) - 1):
-            ax.plot(range(len(data_object.grim_books_data['deaths']['years'])),
-                    data_object.rates[i, :, data_object.grim_books_data['deaths']['genders'].index(gender),
-                    data_object.grim_sheets_to_read.index('all-causes-combined')],
-                    label=data_object.grim_books_data['deaths']['age_groups'][i])
-        handles, labels = ax.get_legend_handles_labels()
-        leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-                        prop={'size': 7})
-        ax.set_title(gender)
-        ax.set_ylim((0., 0.35))
-        plt.setp(ax.get_xticklabels(), fontsize=10)
-        plt.setp(ax.get_yticklabels(), fontsize=10)
-        figure.savefig('mortality_figure_' + gender)
 
-    # deaths by cause with limitation by age group
-    for upper_age_limit in ['70 to 74', '75 to 79']:
-        denominators \
-            = numpy.sum(data_object.grim_books_data['population']['data'][:,
-                        data_object.grim_books_data['population']['years'].index(
-                            data_object.grim_books_data['deaths']['years'][0]):
-                        data_object.grim_books_data['population']['years'].index(
-                            data_object.grim_books_data['deaths']['years'][-1]) + 1,
-                        data_object.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
-        numerators = {}
-        rates = {}
-        causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
-        for cause in causes:
-            numerators[cause] \
-                = numpy.sum(data_object.adjusted_array[
-                            :data_object.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
-                            data_object.grim_books_data['deaths']['genders'].index('Persons'),
-                            data_object.grim_sheets_to_read.index(cause)], axis=0)
-            rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
-
-        figure = plt.figure()
-        ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-        for cause in causes:
-            ax.plot(data_object.grim_books_data['deaths']['years'][
-                    data_object.grim_books_data['deaths']['years'].index(data_object.grim_books_data['deaths']['years'][0]):data_object.grim_books_data['deaths']['years'].index(data_object.grim_books_data['deaths']['years'][-1]) + 1],
-                    rates[cause], label=convert_grim_string(cause))
-        handles, labels = ax.get_legend_handles_labels()
-        leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-                        prop={'size': 7})
-        ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
-        ax.set_ylim((0., 3e-3))
-        ax.set_xlabel('Year', fontsize=10)
-        ax.set_ylabel('Rate per capita per year', fontsize=10)
-        plt.setp(ax.get_xticklabels(), fontsize=10)
-        plt.setp(ax.get_yticklabels(), fontsize=10)
-        figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
-
-    # plot cumulative survival graphs by year and age
-    figure = plt.figure()
-    n_plots, rows, columns, base_font_size = 5, 2, 3, 8
-    plt.style.use('ggplot')
-    for n_plot in range(n_plots):
-        year = 2029 + n_plot * 15 - n_plots * 15
-        ax = figure.add_subplot(rows, columns, n_plot + 1)
-        stacked_data = {'base': numpy.zeros(len(data_object.life_tables[year])),
-                        'survival': data_object.life_tables[year],
-                        'other causes': numpy.ones(len(data_object.life_tables[year]))}
-        ordered_list_of_stacks = ['base', 'survival']
-        new_data = data_object.life_tables[year]
-        for cause in data_object.cumulative_deaths_by_cause[year]:
-            if cause != 'all-causes-combined':
-                new_data = [i + j for i, j in zip(new_data, data_object.cumulative_deaths_by_cause[year][cause])]
-                stacked_data[cause] = new_data
-                ordered_list_of_stacks.append(cause)
-        ordered_list_of_stacks.append('other causes')
-        for i in range(1, len(ordered_list_of_stacks)):
-            ax.fill_between(data_object.integer_ages,
-                            stacked_data[ordered_list_of_stacks[i - 1]][:-1],
-                            stacked_data[ordered_list_of_stacks[i]][:-1],
-                            color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
-                            label=find_string_from_dict(ordered_list_of_stacks[i]))
-        handles, labels = ax.get_legend_handles_labels()
-        if n_plot >= columns: ax.set_xlabel('Age', fontsize=base_font_size)
-        if n_plot % columns == 0: ax.set_ylabel('Proportion', fontsize=base_font_size)
-        if n_plot == n_plots - 1:
-            ax.legend(handles, labels, bbox_to_anchor=(1.2, 1), loc=2, frameon=False, prop={'size': 9})
-        plt.setp(ax.get_xticklabels(), fontsize=base_font_size - 2)
-        plt.setp(ax.get_yticklabels(), fontsize=base_font_size - 2)
-        ax.set_title(year, fontsize=base_font_size + 2)
-        ax.set_xlim((50., 89.))
-    figure.savefig('lifetable')
 
