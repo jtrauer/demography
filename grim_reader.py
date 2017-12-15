@@ -350,11 +350,13 @@ class Spring:
         # 'kidney-failure', 'suicide', 'accidental-drowning', 'accidental-poisoning', 'assault',
         # 'land-transport-accidents', 'liver-disease']
 
-        # specify time range
-        self.start_year = 1907
-        self.finish_year = 2014
+        # read population totals
+        book = open_workbook('grim-' + self.sheets_to_read[0] + '-2017.xlsx')
+        self.population_age_groups, self.population_years, self.genders, self.population_array, _ \
+            = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
 
-        self.read_grim_books()
+        # read death data spreadsheets
+        self.age_groups, self.years, self.genders, self.final_array = read_all_grim_sheets(self.sheets_to_read)
 
         # adjust for missing data, restrict population array to relevant years and calculate rates
         self.adjusted_array = distribute_missing_across_agegroups(self.final_array, self.age_groups)
@@ -364,33 +366,22 @@ class Spring:
             = find_rates_from_deaths_and_populations(self.adjusted_array, self.population_array_relevant_years,
                                                      len(self.sheets_to_read))
 
-    def read_grim_books(self):
-
-        # read population totals
-        book = open_workbook('grim-' + self.sheets_to_read[0] + '-2017.xlsx')
-        self.population_age_groups, self.population_years, self.genders, self.population_array, _ \
-            = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
-
-        # read death data spreadsheets
-        self.age_groups, self.years, self.genders, self.final_array = read_all_grim_sheets(self.sheets_to_read)
-
 
 if __name__ == '__main__':
 
-    analyser = Spring()
+    data_object = Spring()
 
     # create graph of total death rates by age groups over time
-    for gender in analyser.genders:
+    for gender in data_object.genders:
 
         # quick example plot - mortality rates by age group
         figure = plt.figure()
         ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-        for i in range(len(analyser.age_groups) - 1):
-            ax.plot(range(analyser.years.index(analyser.start_year), analyser.years.index(analyser.finish_year) + 1),
-                    analyser.rates[
-                    i, analyser.years.index(analyser.start_year):analyser.years.index(analyser.finish_year) + 1,
-                    analyser.genders.index(gender), analyser.sheets_to_read.index('all-causes-combined')],
-                    label=analyser.age_groups[i])
+        for i in range(len(data_object.age_groups) - 1):
+            ax.plot(range(len(data_object.years)),
+                    data_object.rates[i, :, data_object.genders.index(gender),
+                    data_object.sheets_to_read.index('all-causes-combined')],
+                    label=data_object.age_groups[i])
         handles, labels = ax.get_legend_handles_labels()
         leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                         prop={'size': 7})
@@ -403,25 +394,24 @@ if __name__ == '__main__':
     # deaths by cause with limitation by age group
     for upper_age_limit in ['70 to 74', '75 to 79']:
         denominators \
-            = numpy.sum(analyser.population_array[
-                        :, analyser.population_years.index(analyser.start_year):
-                        analyser.population_years.index(analyser.finish_year) + 1,
-                        analyser.genders.index('Persons')], axis=0)
+            = numpy.sum(data_object.population_array[
+                        :, data_object.population_years.index(data_object.years[0]):
+                        data_object.population_years.index(data_object.years[-1]) + 1,
+                        data_object.genders.index('Persons')], axis=0)
         numerators = {}
         rates = {}
         causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
         for cause in causes:
             numerators[cause] \
-                = numpy.sum(analyser.adjusted_array[:analyser.age_groups.index(upper_age_limit),
-                            analyser.years.index(analyser.start_year):analyser.years.index(analyser.finish_year) + 1,
-                            analyser.genders.index('Persons'), analyser.sheets_to_read.index(cause)], axis=0)
+                = numpy.sum(data_object.adjusted_array[:data_object.age_groups.index(upper_age_limit), :,
+                            data_object.genders.index('Persons'), data_object.sheets_to_read.index(cause)], axis=0)
             rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
 
         figure = plt.figure()
         ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
         for cause in causes:
-            ax.plot(analyser.years[
-                    analyser.years.index(analyser.start_year):analyser.years.index(analyser.finish_year) + 1],
+            ax.plot(data_object.years[
+                    data_object.years.index(data_object.years[0]):data_object.years.index(data_object.years[-1]) + 1],
                     rates[cause], label=convert_grim_string(cause))
         handles, labels = ax.get_legend_handles_labels()
         leg = ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
@@ -435,22 +425,22 @@ if __name__ == '__main__':
         figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
 
     # adjust for missing data, restrict population array to relevant years and calculate rates
-    adjusted_array = distribute_missing_across_agegroups(analyser.final_array, analyser.age_groups)
-    population_array_relevant_years = restrict_population_to_relevant_years(analyser.population_array, analyser.years,
-                                                                            analyser.population_years)
+    adjusted_array = distribute_missing_across_agegroups(data_object.final_array, data_object.age_groups)
+    population_array_relevant_years = restrict_population_to_relevant_years(data_object.population_array, data_object.years,
+                                                                            data_object.population_years)
     rates = find_rates_from_deaths_and_populations(adjusted_array, population_array_relevant_years,
-                                                   len(analyser.sheets_to_read))
+                                                   len(data_object.sheets_to_read))
 
     figure = plt.figure()
     life_tables = {}
     cumulative_deaths_by_cause = {}
     integer_ages = []
 
-    age_group_lower, age_group_upper = find_agegroup_values_from_strings(analyser.age_groups)
+    age_group_lower, age_group_upper = find_agegroup_values_from_strings(data_object.age_groups)
 
     # construct life tables and cumulative death structures for each calendar year
     karup_king = True
-    for year in range(analyser.start_year, analyser.finish_year + 1):
+    for year in range(data_object.years[0], data_object.years[-1] + 1):
 
         # the life table list and the running value to populate it
         survival_total = 1.
@@ -458,7 +448,7 @@ if __name__ == '__main__':
 
         # the cumulative death structures and the value to populate it, by cause of death
         cumulative_deaths_by_cause[year] = {}
-        for cause in analyser.sheets_to_read:
+        for cause in data_object.sheets_to_read:
             cumulative_deaths_by_cause[year][cause] = [0.]
             cumulative_deaths = 0.
 
@@ -472,12 +462,12 @@ if __name__ == '__main__':
                 if karup_king:
                     rate_for_age = karup_king_interpolation(
                         age_group_index, within_group_age, 17,
-                        rates[:, analyser.years.index(year), analyser.genders.index('Persons'),
-                        analyser.sheets_to_read.index(cause)])
+                        rates[:, data_object.years.index(year), data_object.genders.index('Persons'),
+                        data_object.sheets_to_read.index(cause)])
                 else:
                     rate_for_age \
-                        = rates[age_group_index, analyser.years.index(year), analyser.genders.index('Persons'),
-                                analyser.sheets_to_read.index(cause)]
+                        = rates[age_group_index, data_object.years.index(year), data_object.genders.index('Persons'),
+                                data_object.sheets_to_read.index(cause)]
 
                 # decrement survival and increment cumulative deaths
                 if cause == 'all-causes-combined':
