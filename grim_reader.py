@@ -368,6 +368,8 @@ class Spring:
         self.life_tables = {}
         self.cumulative_deaths_by_cause = {}
         self.grim_books_data = {'population': {}, 'deaths': {}}
+        self.restricted_rates = {}
+        self.upper_age_limits_to_cut_at = ['70 to 74', '75 to 79']
 
         # read population data
         book = open_workbook('grim-' + self.grim_sheets_to_read[0] + '-2017.xlsx')
@@ -387,6 +389,8 @@ class Spring:
         self.rates = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
                                                             self.grim_books_data['population']['adjusted_data'],
                                                             len(self.grim_sheets_to_read))
+
+        self.find_average_rates()
 
         # # not sure of this code yet
         # non_cvs_deaths \
@@ -413,6 +417,26 @@ class Spring:
         return restrict_population_to_relevant_years(self.grim_books_data['population']['data'],
                                                      self.grim_books_data['deaths']['years'],
                                                      self.grim_books_data['population']['years'])
+
+    def find_average_rates(self):
+        """
+        Find death rates by year averaged over age groups, but excluding the highest ones.
+        """
+
+        for upper_age_limit in self.upper_age_limits_to_cut_at:
+            denominators \
+                = numpy.sum(self.grim_books_data['population']['adjusted_data'][
+                            :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
+                            self.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
+            numerators = {}
+            self.restricted_rates[upper_age_limit] = {}
+            for cause in self.grim_sheets_to_read:
+                numerators[cause] \
+                    = numpy.sum(self.grim_books_data['deaths']['adjusted_data'][
+                                :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
+                                self.grim_books_data['deaths']['genders'].index('Persons'),
+                                self.grim_sheets_to_read.index(cause)], axis=0)
+                self.restricted_rates[upper_age_limit][cause] = [i / j for i, j in zip(numerators[cause], denominators)]
 
     def find_life_tables(self, karup_king=True):
         """
@@ -505,28 +529,12 @@ class Outputs:
         Deaths by cause with limitation by age group.
         """
 
-        # should move some of this average rate calculation code to the data processing
-
-        for upper_age_limit in ['70 to 74', '75 to 79']:
-            denominators \
-                = numpy.sum(self.data_object.grim_books_data['population']['adjusted_data'][
-                            :self.data_object.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
-                            self.data_object.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
-            numerators = {}
-            rates = {}
-            causes = ['all-causes-combined', 'all-diseases-of-the-circulatory-system', 'all-neoplasms']
-            for cause in causes:
-                numerators[cause] \
-                    = numpy.sum(self.data_object.grim_books_data['deaths']['adjusted_data'][
-                                :self.data_object.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
-                                self.data_object.grim_books_data['deaths']['genders'].index('Persons'),
-                                self.data_object.grim_sheets_to_read.index(cause)], axis=0)
-                rates[cause] = [i / j for i, j in zip(numerators[cause], denominators)]
+        for upper_age_limit in self.data_object.upper_age_limits_to_cut_at:
             figure = plt.figure()
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-            for cause in causes:
+            for cause in self.data_object.grim_sheets_to_read:
                 ax.plot(self.data_object.grim_books_data['deaths']['years'],
-                        rates[cause], label=convert_grim_string(cause))
+                        self.data_object.restricted_rates[upper_age_limit][cause], label=convert_grim_string(cause))
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
