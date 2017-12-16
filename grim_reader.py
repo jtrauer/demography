@@ -170,7 +170,8 @@ def convert_grim_string(string_to_convert):
     conversion_dictionary \
         = {'all-external-causes-of-morbidity-and-mortality': 'External causes',
            'all-diseases-of-the-circulatory-system': 'Circulatory diseases',
-           'all-neoplasms': 'Neoplasms'}
+           'all-neoplasms': 'Neoplasms',
+           'all-causes-combined': 'All causes'}
 
     if string_to_convert in conversion_dictionary:
         return conversion_dictionary[string_to_convert]
@@ -237,7 +238,8 @@ def restrict_population_to_relevant_years(pop_array, data_years, population_year
 def find_string_from_dict(string, capitalise=True):
 
     string_dictionary = {'all-diseases-of-the-circulatory-system': 'cardiovascular disease',
-                         'all-neoplasms': 'cancer'}
+                         'all-neoplasms': 'cancer',
+                         'all-causes-combined': 'all causes'}
     string_to_return = string_dictionary[string] if string in string_dictionary else string
     if capitalise:
         return string_to_return[0].upper() + string_to_return[1:]
