@@ -438,7 +438,7 @@ class Spring:
                                 self.grim_sheets_to_read.index(cause)], axis=0)
                 self.restricted_rates[upper_age_limit][cause] = [i / j for i, j in zip(numerators[cause], denominators)]
 
-    def find_life_tables(self, karup_king=True):
+    def find_life_tables(self, karup_king=False):
         """
         Use the death rates to estimate the remaining proportion left alive and the cumulative deaths by age.
 
@@ -477,10 +477,10 @@ class Spring:
                             self.grim_books_data['deaths']['genders'].index('Persons'),
                             self.grim_sheets_to_read.index(cause)])
                     else:
-                        rate_for_age = rates[age_group_index,
-                                             self.grim_books_data['deaths']['years'].index(year),
-                                             self.grim_books_data['deaths']['genders'].index('Persons'),
-                                             self.grim_sheets_to_read.index(cause)]
+                        rate_for_age = self.rates[age_group_index,
+                                                  self.grim_books_data['deaths']['years'].index(year),
+                                                  self.grim_books_data['deaths']['genders'].index('Persons'),
+                                                  self.grim_sheets_to_read.index(cause)]
 
                     # decrement survival and increment cumulative deaths
                     if cause == 'all-causes-combined':
