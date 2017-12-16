@@ -368,7 +368,8 @@ class Spring:
         self.life_tables = {}
         self.cumulative_deaths_by_cause = {}
         self.grim_books_data = {'population': {}, 'deaths': {}}
-        self.restricted_rates = {}
+        self.rates = {}
+        self.averaged_rates = {}
         self.upper_age_limits_to_cut_at = ['70 to 74', '75 to 79']
 
         # read population data
@@ -386,25 +387,28 @@ class Spring:
         self.grim_books_data['population']['adjusted_data'] = self.restrict_death_data()
 
         # find death rates from tidied arrays
-        self.rates = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
-                                                            self.grim_books_data['population']['adjusted_data'],
-                                                            len(self.grim_sheets_to_read))
+        self.rates['unadjusted'] \
+            = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
+                                                     self.grim_books_data['population']['adjusted_data'],
+                                                     len(self.grim_sheets_to_read))
 
-        self.find_average_rates()
-
-        # # not sure of this code yet
+        # # not sure of this code yet - and doesn't seem to have much effect numerically anyway
         # non_cvs_deaths \
         #     = numpy.subtract(self.grim_books_data['deaths']['adjusted_data'][
         #                      :, :, :, self.grim_sheets_to_read.index('all-causes-combined')],
         #                      self.grim_books_data['deaths']['adjusted_data'][
         #                      :, :, :, self.grim_sheets_to_read.index('all-diseases-of-the-circulatory-system')])
         # average_surviving_prop_without_noncvs \
-        #     = 1. - (numpy.divide(non_cvs_deaths, self.grim_books_data['population']['adjusted_data']) / 2.)
+        #     = 1. - numpy.divide(non_cvs_deaths, self.grim_books_data['population']['adjusted_data']) / 2.
         # self.grim_books_data['population']['without_noncvs'] \
         #     = numpy.multiply(self.grim_books_data['population']['adjusted_data'], average_surviving_prop_without_noncvs)
-        # self.noncvs_rate = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
-        #                                                           self.grim_books_data['population']['without_noncvs'],
-        #                                                           len(self.grim_sheets_to_read))
+        # self.rates['noncvs_adjusted'] \
+        #     = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
+        #                                              self.grim_books_data['population']['without_noncvs'],
+        #                                              len(self.grim_sheets_to_read))
+
+        # find average rates across groups
+        self.find_average_rates()
 
     def restrict_death_data(self):
         """
@@ -423,20 +427,22 @@ class Spring:
         Find death rates by year averaged over age groups, but excluding the highest ones.
         """
 
+        self.averaged_rates['adjusted_data'] = {}
         for upper_age_limit in self.upper_age_limits_to_cut_at:
             denominators \
                 = numpy.sum(self.grim_books_data['population']['adjusted_data'][
                             :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
                             self.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
             numerators = {}
-            self.restricted_rates[upper_age_limit] = {}
+            self.averaged_rates['adjusted_data'][upper_age_limit] = {}
             for cause in self.grim_sheets_to_read:
                 numerators[cause] \
                     = numpy.sum(self.grim_books_data['deaths']['adjusted_data'][
                                 :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
                                 self.grim_books_data['deaths']['genders'].index('Persons'),
                                 self.grim_sheets_to_read.index(cause)], axis=0)
-                self.restricted_rates[upper_age_limit][cause] = [i / j for i, j in zip(numerators[cause], denominators)]
+                self.averaged_rates['adjusted_data'][upper_age_limit][cause] \
+                    = [i / j for i, j in zip(numerators[cause], denominators)]
 
     def find_life_tables(self, karup_king=False):
         """
@@ -473,14 +479,15 @@ class Spring:
                     if karup_king:
                         rate_for_age = karup_king_interpolation(
                             age_group_index, within_group_age, 17,
-                            self.rates[:, self.grim_books_data['deaths']['years'].index(year),
+                            self.rates['unadjusted'][:, self.grim_books_data['deaths']['years'].index(year),
                             self.grim_books_data['deaths']['genders'].index('Persons'),
                             self.grim_sheets_to_read.index(cause)])
                     else:
-                        rate_for_age = self.rates[age_group_index,
-                                                  self.grim_books_data['deaths']['years'].index(year),
-                                                  self.grim_books_data['deaths']['genders'].index('Persons'),
-                                                  self.grim_sheets_to_read.index(cause)]
+                        rate_for_age = self.rates['unadjusted'][
+                            age_group_index,
+                            self.grim_books_data['deaths']['years'].index(year),
+                            self.grim_books_data['deaths']['genders'].index('Persons'),
+                            self.grim_sheets_to_read.index(cause)]
 
                     # decrement survival and increment cumulative deaths
                     if cause == 'all-causes-combined':
@@ -512,7 +519,8 @@ class Outputs:
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             for i in range(len(self.data_object.grim_books_data['deaths']['age_groups']) - 1):
                 ax.plot(range(len(self.data_object.grim_books_data['deaths']['years'])),
-                        self.data_object.rates[i, :, self.data_object.grim_books_data['deaths']['genders'].index(gender),
+                        self.data_object.rates['unadjusted'][
+                        i, :, self.data_object.grim_books_data['deaths']['genders'].index(gender),
                         self.data_object.grim_sheets_to_read.index('all-causes-combined')],
                         label=self.data_object.grim_books_data['deaths']['age_groups'][i])
             handles, labels = ax.get_legend_handles_labels()
@@ -534,7 +542,8 @@ class Outputs:
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             for cause in self.data_object.grim_sheets_to_read:
                 ax.plot(self.data_object.grim_books_data['deaths']['years'],
-                        self.data_object.restricted_rates[upper_age_limit][cause], label=convert_grim_string(cause))
+                        self.data_object.averaged_rates['adjusted_data'][upper_age_limit][cause],
+                        label=convert_grim_string(cause))
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
