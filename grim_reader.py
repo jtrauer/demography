@@ -509,7 +509,8 @@ class Outputs:
 
         for upper_age_limit in ['70 to 74', '75 to 79']:
             denominators \
-                = numpy.sum(self.data_object.grim_books_data['population']['adjusted_data'][:, :,
+                = numpy.sum(self.data_object.grim_books_data['population']['adjusted_data'][
+                            :self.data_object.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
                             self.data_object.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
             numerators = {}
             rates = {}
