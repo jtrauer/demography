@@ -444,7 +444,7 @@ class Spring:
                 self.averaged_rates['adjusted_data'][upper_age_limit][cause] \
                     = [i / j for i, j in zip(numerators[cause], denominators)]
 
-    def find_life_tables(self, karup_king=False):
+    def find_life_tables(self, karup_king=True):
         """
         Use the death rates to estimate the remaining proportion left alive and the cumulative deaths by age.
 
@@ -517,17 +517,21 @@ class Outputs:
         for gender in self.data_object.grim_books_data['deaths']['genders']:
             figure = plt.figure()
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-            for i in range(len(self.data_object.grim_books_data['deaths']['age_groups']) - 1):
-                ax.plot(range(len(self.data_object.grim_books_data['deaths']['years'])),
+            iterations = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
+            colours = [plt.cm.Blues(x) for x in numpy.linspace(0., 1., iterations)]
+            for i in range(iterations):
+                ax.plot(self.data_object.grim_books_data['deaths']['years'],
                         self.data_object.rates['unadjusted'][
                         i, :, self.data_object.grim_books_data['deaths']['genders'].index(gender),
                         self.data_object.grim_sheets_to_read.index('all-causes-combined')],
-                        label=self.data_object.grim_books_data['deaths']['age_groups'][i])
+                        label=self.data_object.grim_books_data['deaths']['age_groups'][i],
+                        color=colours[i])
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
             ax.set_title(gender)
             ax.set_ylim((0., 0.35))
+            ax.set_xlim((1910., 2014.))
             plt.setp(ax.get_xticklabels(), fontsize=10)
             plt.setp(ax.get_yticklabels(), fontsize=10)
             figure.savefig('mortality_figure_' + gender)
@@ -548,7 +552,7 @@ class Outputs:
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
             ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
-            ax.set_ylim((0., 3e-3))
+            ax.set_ylim((0., 8e-3))
             ax.set_xlabel('Year', fontsize=10)
             ax.set_ylabel('Rate per capita per year', fontsize=10)
             plt.setp(ax.get_xticklabels(), fontsize=10)
