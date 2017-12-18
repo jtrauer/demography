@@ -199,6 +199,7 @@ def distribute_missing_across_agegroups(final_array, age_groups):
             for c in range(final_array.shape[3]):
                 prop_missing = final_array[age_groups.index('Missing'), y, g, c] \
                                / sum(final_array[:age_groups.index('Missing'), y, g, c])
+                prop_missing = 0. if numpy.isnan(prop_missing) else prop_missing
                 adjusted_for_missing_array[:, y, g, c] \
                     = final_array[:age_groups.index('Missing'), y, g, c] * (1. + prop_missing)
     return adjusted_for_missing_array
@@ -328,13 +329,13 @@ class Spring:
         """
         Basic data processing structure that reads the input spreadsheets, processes them and can then be fed to the
         outputs structure for graphing, etc.
-        """
 
-        # for data structures, dimensions are:
-        # 1. age group
-        # 2. years
-        # 3. gender
-        # 4. cause of death
+        For data structures, dimensions are:
+        1. age group
+        2. years
+        3. gender
+        4. cause of death
+        """
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
         self.grim_sheets_to_read = ['all-causes-combined',
