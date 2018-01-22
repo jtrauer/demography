@@ -171,7 +171,8 @@ def convert_grim_string(string_to_convert):
         = {'all-external-causes-of-morbidity-and-mortality': 'External causes',
            'all-diseases-of-the-circulatory-system': 'Circulatory diseases',
            'all-neoplasms': 'Neoplasms',
-           'all-causes-combined': 'All causes'}
+           'all-causes-combined': 'All causes',
+           'Persons': 'Both genders'}
 
     if string_to_convert in conversion_dictionary:
         return conversion_dictionary[string_to_convert]
@@ -339,8 +340,7 @@ class Spring:
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
         self.grim_sheets_to_read = ['all-causes-combined',
-                                    'all-diseases-of-the-circulatory-system',
-                                    'all-neoplasms']
+                                    'all-diseases-of-the-circulatory-system']
         # 'all-certain-conditions-originating-in-the-perinatal-period',
         # 'all-certain-infectious-and-parasitic-diseases',
         # 'all-diseases-of-the-circulatory-system',
@@ -512,7 +512,7 @@ class Outputs:
 
         self.data_object = data_object
 
-    def plot_death_rates_over_time(self):
+    def plot_death_rates_over_time(self, cause='all-causes-combined'):
         """
         Create graph of total death rates by age groups over time.
         """
@@ -522,22 +522,22 @@ class Outputs:
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             iterations = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
             colours = [plt.cm.Blues(x) for x in numpy.linspace(0., 1., iterations)]
-            for i in range(iterations):
+            for i in range(5, iterations):
                 ax.plot(self.data_object.grim_books_data['deaths']['years'],
                         self.data_object.rates['unadjusted'][
                         i, :, self.data_object.grim_books_data['deaths']['genders'].index(gender),
-                        self.data_object.grim_sheets_to_read.index('all-causes-combined')],
+                        self.data_object.grim_sheets_to_read.index(cause)],
                         label=self.data_object.grim_books_data['deaths']['age_groups'][i],
                         color=colours[i])
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
-            ax.set_title(gender)
-            ax.set_ylim((0., 0.35))
-            ax.set_xlim((1910., 2014.))
+            ax.set_title(convert_grim_string(gender))
+            ax.set_ylim((5e-4, 1e-2))
+            ax.set_xlim((1908., 2014.))
             plt.setp(ax.get_xticklabels(), fontsize=10)
             plt.setp(ax.get_yticklabels(), fontsize=10)
-            figure.savefig('mortality_figure_' + gender)
+            figure.savefig('mortality_figure_' + gender.lower())
 
     def plot_deaths_by_cause(self):
         """
@@ -591,13 +591,16 @@ class Outputs:
                                 color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
                                 label=find_string_from_dict(ordered_list_of_stacks[i]))
             handles, labels = ax.get_legend_handles_labels()
-            if n_plot >= columns: ax.set_xlabel('Age', fontsize=base_font_size)
-            if n_plot % columns == 0: ax.set_ylabel('Proportion', fontsize=base_font_size)
+            if n_plot >= columns:
+                ax.set_xlabel('Age', fontsize=base_font_size)
+            if n_plot % columns == 0:
+                ax.set_ylabel('Proportion', fontsize=base_font_size)
             if n_plot == n_plots - 1:
                 ax.legend(handles, labels, bbox_to_anchor=(1.2, 1), loc=2, frameon=False, prop={'size': 9})
             plt.setp(ax.get_xticklabels(), fontsize=base_font_size - 2)
             plt.setp(ax.get_yticklabels(), fontsize=base_font_size - 2)
             ax.set_title(year, fontsize=base_font_size + 2)
             ax.set_xlim((50., 89.))
+            ax.set_ylim((0., 1.))
         figure.savefig('lifetable')
 
