@@ -113,7 +113,8 @@ def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5,
         genders.append(gender)
 
     # if all data is zeros for that row across all layers, discard that row (year)
-    if years_to_keep is None: years_to_keep = numpy.any(numpy.all(final_array, axis=0), axis=1)
+    if years_to_keep is None:
+        years_to_keep = numpy.any(numpy.all(final_array, axis=0), axis=1)
     final_array = final_array[:, years_to_keep, :]
     years = list(numpy.array(years)[years_to_keep])
 
@@ -128,16 +129,16 @@ def read_all_grim_sheets(sheet_names):
     Args:
         sheet_names: The sheets that need to be read
     Returns:
-         age_groups: Age group strings directly from the sheet reading function
-         years: List of years as integers directly from teh sheet reading function
-         final_array: The final data structure in four dimensions by age group, years, gender and sheet (cause of death)
+        age_groups: Age group strings directly from the sheet reading function
+        years: List of years as integers directly from teh sheet reading function
+        final_array: The final data structure in four dimensions by age group, years, gender and sheet (cause of death)
     """
 
     # loop through sheet names
-    for name in sheet_names:
+    for n, name in enumerate(sheet_names):
 
         # ensure we keep the years from the all causes sheet, as there are several years with zero data in other sheets
-        if name == sheet_names[0]:
+        if n == 0:
             years_to_keep = None
         else:
             years_to_keep = years_to_keep
@@ -219,7 +220,8 @@ def find_rates_from_deaths_and_populations(death_array, pop_array, n_sheets):
     """
 
     rates_array = numpy.zeros_like(death_array)
-    for s in range(n_sheets): rates_array[:, :, :, s] = numpy.divide(death_array[:, :, :, s], pop_array)
+    for s in range(n_sheets):
+        rates_array[:, :, :, s] = numpy.divide(death_array[:, :, :, s], pop_array)
     return rates_array
 
 
@@ -284,6 +286,7 @@ def karup_king_interpolation(group_index, within_group_index, last_age_group_ind
 
     Args:
         group_index: The index for the age group of interest
+        within_group_index: Distance through the subgroup being analysed (i.e the five years)
         last_age_group_index: The index for the highest age group to be analysed
         data: List (or one-dimensional array) for the quantities being smoothed
         age_group_width: The number of single ages in the age group (currently has to be five)
@@ -309,16 +312,20 @@ def karup_king_interpolation(group_index, within_group_index, last_age_group_ind
                          [-.024, .048, .176],
                          [.008, -.056, .248],
                          [.064, -.208, .344]]}
-    if group_index == 0:
+    if group_index < 0:
+        print('Group index cannot be negative')
+    elif group_index > last_age_group_index:
+        print('Group index cannot be greater than number of groups')
+    elif group_index == 0:
         group, group_start_adjustment = 'first', 0
     elif group_index == last_age_group_index:
         group, group_start_adjustment = 'last', -2
-    elif group_index < last_age_group_index:
+    else:
         group, group_start_adjustment = 'middle', -1
     interpolated_estimate = 0.
     for n_age_group in range(3):
         interpolated_estimate += age_group_width * coefficients[group][within_group_index][n_age_group] \
-                             * data[group_index + n_age_group + group_start_adjustment]
+                                 * data[group_index + n_age_group + group_start_adjustment]
     return interpolated_estimate
 
 
@@ -340,7 +347,8 @@ class Spring:
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
         self.grim_sheets_to_read = ['all-causes-combined',
-                                    'all-diseases-of-the-circulatory-system']
+                                    'all-diseases-of-the-circulatory-system',
+                                    'all-neoplasms']
         # 'all-certain-conditions-originating-in-the-perinatal-period',
         # 'all-certain-infectious-and-parasitic-diseases',
         # 'all-diseases-of-the-circulatory-system',
@@ -394,6 +402,8 @@ class Spring:
             = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
                                                      self.grim_books_data['population']['adjusted_data'],
                                                      len(self.grim_sheets_to_read))
+
+        self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
         # # not sure of this code yet - and doesn't seem to have much effect numerically anyway
         # non_cvs_deaths \
@@ -480,11 +490,13 @@ class Spring:
 
                     # find rate, either with Karup-King interpolation or without
                     if karup_king:
-                        rate_for_age = karup_king_interpolation(
-                            age_group_index, within_group_age, 17,
-                            self.rates['unadjusted'][:, self.grim_books_data['deaths']['years'].index(year),
-                            self.grim_books_data['deaths']['genders'].index('Persons'),
-                            self.grim_sheets_to_read.index(cause)])
+                        rate_for_age \
+                            = karup_king_interpolation(
+                                age_group_index, within_group_age, 17,
+                                self.rates['unadjusted'][:,
+                                self.grim_books_data['deaths']['years'].index(year),
+                                self.grim_books_data['deaths']['genders'].index('Persons'),
+                                self.grim_sheets_to_read.index(cause)])
                     else:
                         rate_for_age = self.rates['unadjusted'][
                             age_group_index,
@@ -512,29 +524,42 @@ class Outputs:
 
         self.data_object = data_object
 
-    def plot_death_rates_over_time(self, cause='all-causes-combined'):
+    def plot_death_rates_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(5e-4, 1e-2),
+                                   log_scale=True):
         """
         Create graph of total death rates by age groups over time.
+
+        Args:
+            cause: String for cause to be plotted
+            x_limits: Tuple containing the two elements for the left and right boundary of the x-axis
+            y_limits: Tuple containing the two elements for the lower and upper boundary of the y-axis
+            log_scale: Whether to plot with a vertical log scale or just linear (if False)
         """
 
+        if not x_limits:
+            x_limits = (float(min(self.data_object.grim_books_data['deaths']['years'])),
+                        float(max(self.data_object.grim_books_data['deaths']['years'])))
         for gender in self.data_object.grim_books_data['deaths']['genders']:
             figure = plt.figure()
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             iterations = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
             colours = [plt.cm.Blues(x) for x in numpy.linspace(0., 1., iterations)]
+            year_values = self.data_object.grim_books_data['deaths']['years']
             for i in range(5, iterations):
-                ax.plot(self.data_object.grim_books_data['deaths']['years'],
-                        self.data_object.rates['unadjusted'][
-                        i, :, self.data_object.grim_books_data['deaths']['genders'].index(gender),
-                        self.data_object.grim_sheets_to_read.index(cause)],
-                        label=self.data_object.grim_books_data['deaths']['age_groups'][i],
-                        color=colours[i])
+                rates = self.data_object.rates['unadjusted'][i, :,
+                        self.data_object.grim_books_data['deaths']['genders'].index(gender),
+                        self.data_object.grim_sheets_to_read.index(cause)]
+                label = self.data_object.grim_books_data['deaths']['age_groups'][i]
+                if log_scale:
+                    ax.semilogy(year_values, rates, label=label, color=colours[i])
+                else:
+                    ax.plot(year_values, rates, label=label, color=colours[i])
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
             ax.set_title(convert_grim_string(gender))
-            ax.set_ylim((5e-4, 1e-2))
-            ax.set_xlim((1908., 2014.))
+            ax.set_ylim(y_limits)
+            ax.set_xlim(x_limits)
             plt.setp(ax.get_xticklabels(), fontsize=10)
             plt.setp(ax.get_yticklabels(), fontsize=10)
             figure.savefig('mortality_figure_' + gender.lower())
@@ -568,10 +593,10 @@ class Outputs:
         """
 
         figure = plt.figure()
-        n_plots, rows, columns, base_font_size = 5, 2, 3, 8
+        n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 8, 30, 2014
         plt.style.use('ggplot')
         for n_plot in range(n_plots):
-            year = 2029 + n_plot * 15 - n_plots * 15
+            year = last_year + n_plot * year_spacing - (n_plots - 1) * year_spacing
             ax = figure.add_subplot(rows, columns, n_plot + 1)
             stacked_data = {'base': numpy.zeros(len(self.data_object.life_tables[year])),
                             'survival': self.data_object.life_tables[year],
