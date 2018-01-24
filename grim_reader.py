@@ -394,6 +394,8 @@ class Spring:
          self.grim_books_data['deaths']['genders'], self.grim_books_data['deaths']['data']) \
             = read_all_grim_sheets(self.grim_sheets_to_read)
 
+        self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
+
         # restrict input array and find relevant years
         self.grim_books_data['deaths']['adjusted_data'] \
             = distribute_missing_across_agegroups(self.grim_books_data['deaths']['data'],
@@ -411,30 +413,8 @@ class Spring:
 
         self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
-        # # not sure of this code yet - and doesn't seem to have much effect numerically anyway
-        # non_cvs_deaths \
-        #     = numpy.subtract(self.grim_books_data['deaths']['adjusted_data'][
-        #                      :, :, :, self.grim_sheets_to_read.index('all-causes-combined')],
-        #                      self.grim_books_data['deaths']['adjusted_data'][
-        #                      :, :, :, self.grim_sheets_to_read.index('all-diseases-of-the-circulatory-system')])
-        # average_surviving_prop_without_noncvs \
-        #     = 1. - numpy.divide(non_cvs_deaths, self.grim_books_data['population']['adjusted_data']) / 2.
-        # self.grim_books_data['population']['without_noncvs'] \
-        #     = numpy.multiply(self.grim_books_data['population']['adjusted_data'], average_surviving_prop_without_noncvs)
-        # self.rates['noncvs_adjusted'] \
-        #     = find_rates_from_deaths_and_populations(self.grim_books_data['deaths']['adjusted_data'],
-        #                                              self.grim_books_data['population']['without_noncvs'],
-        #                                              len(self.grim_sheets_to_read))
-
         # find average rates across groups
         self.find_average_rates()
-
-    def restrict_death_data(self):
-        """
-        Adjust for missing data, restrict population array to relevant years and calculate rates.
-        """
-
-        return
 
     def find_average_rates(self):
         """
@@ -571,6 +551,10 @@ class Outputs:
         """
 
         for upper_age_limit in self.data_object.upper_age_limits_to_cut_at:
+            upper_age_limit_string = '' \
+                if upper_age_limit == self.data_object.grim_books_data['deaths']['age_groups'][-2] \
+                else ', under ' + upper_age_limit[:2] + 's'
+
             figure = plt.figure()
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             for cause in self.data_object.grim_sheets_to_read:
@@ -580,14 +564,14 @@ class Outputs:
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
-            ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
+            ax.set_title('Death rates by cause' + upper_age_limit_string)
             ax.set_ylim((0., 5e-4))
             ax.set_xlim((1980., 2014.))
             ax.set_xlabel('Year', fontsize=10)
             ax.set_ylabel('Rate per capita per year', fontsize=10)
             plt.setp(ax.get_xticklabels(), fontsize=10)
             plt.setp(ax.get_yticklabels(), fontsize=10)
-            figure.savefig('mortality_figure_cause_under ' + upper_age_limit[:2] + 's')
+            figure.savefig('mortality_figure_cause' + upper_age_limit_string)
 
     def plot_cumulative_survival(self):
         """
