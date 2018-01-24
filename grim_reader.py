@@ -241,8 +241,8 @@ def restrict_population_to_relevant_years(pop_array, data_years, population_year
 
 def find_string_from_dict(string, capitalise=True):
 
-    string_dictionary = {'all-diseases-of-the-circulatory-system': 'Cumulative cardiovascular deaths',
-                         'all-neoplasms': 'cancer',
+    string_dictionary = {'all-diseases-of-the-circulatory-system': 'cumulative cardiovascular deaths',
+                         'all-neoplasms': 'cumulative cancer deaths',
                          'all-causes-combined': 'all causes'}
     string_to_return = string_dictionary[string] if string in string_dictionary else string
     if capitalise:
@@ -346,8 +346,7 @@ class Spring:
         """
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
-        self.grim_sheets_to_read = ['all-causes-combined',
-                                    'all-diseases-of-the-circulatory-system',
+        self.grim_sheets_to_read = ['all-causes-combined', 'all-diseases-of-the-circulatory-system',
                                     'all-neoplasms']
         # 'all-certain-conditions-originating-in-the-perinatal-period',
         # 'all-certain-infectious-and-parasitic-diseases',
@@ -505,8 +504,8 @@ class Outputs:
 
         self.data_object = data_object
 
-    def plot_death_rates_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(1e-5, 1e-4),
-                                   log_scale=True):
+    def plot_death_rates_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(2e-5, .18),
+                                   log_scale=False, split_by_gender=True):
         """
         Create graph of total death rates by age groups over time.
 
@@ -515,14 +514,18 @@ class Outputs:
             x_limits: Tuple containing the two elements for the left and right boundary of the x-axis
             y_limits: Tuple containing the two elements for the lower and upper boundary of the y-axis
             log_scale: Whether to plot with a vertical log scale or just linear (if False)
+            split_by_gender: Whether to produce three graphs for males, females and both genders
         """
 
+        figure = plt.figure()
         if not x_limits:
             x_limits = (float(min(self.data_object.grim_books_data['deaths']['years'])),
                         float(max(self.data_object.grim_books_data['deaths']['years'])))
-        for gender in self.data_object.grim_books_data['deaths']['genders']:
-            figure = plt.figure()
+        genders_to_plot = self.data_object.grim_books_data['deaths']['genders'] if split_by_gender else ['Persons']
+
+        for gender in genders_to_plot:
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+            gender_string = convert_grim_string(gender) if split_by_gender else ''
             iterations = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
             colours = [plt.cm.Blues(x) for x in numpy.linspace(0., 1., iterations)]
             year_values = self.data_object.grim_books_data['deaths']['years']
@@ -538,16 +541,16 @@ class Outputs:
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
-            ax.set_title(convert_grim_string(gender))
+            ax.set_title(gender_string)
             ax.set_ylim(y_limits)
             ax.set_xlim(x_limits)
-            plt.setp(ax.get_xticklabels(), fontsize=10)
-            plt.setp(ax.get_yticklabels(), fontsize=10)
-            figure.savefig('mortality_figure_' + gender.lower())
+        plt.setp(ax.get_xticklabels(), fontsize=10)
+        plt.setp(ax.get_yticklabels(), fontsize=10)
+        figure.savefig('mortality_figure_' + gender.lower())
 
     def plot_deaths_by_cause(self):
         """
-        Deaths by cause with limitation by age group.
+        Deaths by cause with limitation by age group and with age groups unlimited.
         """
 
         for upper_age_limit in self.data_object.upper_age_limits_to_cut_at:
@@ -565,8 +568,8 @@ class Outputs:
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
             ax.set_title('Death rates by cause' + upper_age_limit_string)
-            ax.set_ylim((0., 5e-4))
-            ax.set_xlim((1980., 2014.))
+            ax.set_ylim((0., 9e-3))
+            ax.set_xlim((1964., 2014.))
             ax.set_xlabel('Year', fontsize=10)
             ax.set_ylabel('Rate per capita per year', fontsize=10)
             plt.setp(ax.get_xticklabels(), fontsize=10)
@@ -579,7 +582,7 @@ class Outputs:
         """
 
         figure = plt.figure()
-        n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 8, 30, 2014
+        n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 8, 25, 2014
         plt.style.use('ggplot')
         for n_plot in range(n_plots):
             year = last_year + n_plot * year_spacing - (n_plots - 1) * year_spacing
