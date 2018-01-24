@@ -170,7 +170,7 @@ def convert_grim_string(string_to_convert):
 
     conversion_dictionary \
         = {'all-external-causes-of-morbidity-and-mortality': 'External causes',
-           'all-diseases-of-the-circulatory-system': 'Circulatory diseases',
+           'all-diseases-of-the-circulatory-system': 'Cardiovascular disease',
            'all-neoplasms': 'Neoplasms',
            'all-causes-combined': 'All causes',
            'Persons': 'Both genders'}
@@ -241,7 +241,7 @@ def restrict_population_to_relevant_years(pop_array, data_years, population_year
 
 def find_string_from_dict(string, capitalise=True):
 
-    string_dictionary = {'all-diseases-of-the-circulatory-system': 'cardiovascular disease',
+    string_dictionary = {'all-diseases-of-the-circulatory-system': 'Cumulative cardiovascular deaths',
                          'all-neoplasms': 'cancer',
                          'all-causes-combined': 'all causes'}
     string_to_return = string_dictionary[string] if string in string_dictionary else string
@@ -295,23 +295,23 @@ def karup_king_interpolation(group_index, within_group_index, last_age_group_ind
     """
 
     coefficients = {'first':
-                        [[.344, -.208, .064],
-                         [.248, -.056, .008],
-                         [.176, .048, -.024],
-                         [.128, .104, -.032],
-                         [.104, .122, -.016]],
+                        ((.344, -.208, .064),
+                         (.248, -.056, .008),
+                         (.176, .048, -.024),
+                         (.128, .104, -.032),
+                         (.104, .122, -.016)),
                     'middle':
-                        [[.064, .152, -.016],
-                         [.008, .224, -.032],
-                         [-.024, .248, -.024],
-                         [-.032, .224, .008],
-                         [-.016, .152, .064]],
+                        ((.064, .152, -.016),
+                         (.008, .224, -.032),
+                         (-.024, .248, -.024),
+                         (-.032, .224, .008),
+                         (-.016, .152, .064)),
                     'last':
-                        [[-.016, .112, .104],
-                         [-.032, .104, .128],
-                         [-.024, .048, .176],
-                         [.008, -.056, .248],
-                         [.064, -.208, .344]]}
+                        ((-.016, .112, .104),
+                         (-.032, .104, .128),
+                         (-.024, .048, .176),
+                         (.008, -.056, .248),
+                         (.064, -.208, .344))}
     if group_index < 0:
         print('Group index cannot be negative')
     elif group_index > last_age_group_index:
@@ -347,8 +347,7 @@ class Spring:
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
         self.grim_sheets_to_read = ['all-causes-combined',
-                                    'all-external-causes-of-morbidity-and-mortality',
-                                    'suicide']
+                                    'all-diseases-of-the-circulatory-system']
         # 'all-certain-conditions-originating-in-the-perinatal-period',
         # 'all-certain-infectious-and-parasitic-diseases',
         # 'all-diseases-of-the-circulatory-system',
@@ -601,7 +600,7 @@ class Outputs:
             ax = figure.add_subplot(rows, columns, n_plot + 1)
             stacked_data = {'base': numpy.zeros(len(self.data_object.life_tables[year])),
                             'survival': self.data_object.life_tables[year],
-                            'other causes': numpy.ones(len(self.data_object.life_tables[year]))}
+                            'cumulative other deaths': numpy.ones(len(self.data_object.life_tables[year]))}
             ordered_list_of_stacks = ['base', 'survival']
             new_data = self.data_object.life_tables[year]
             for cause in self.data_object.cumulative_deaths_by_cause[year]:
@@ -609,7 +608,7 @@ class Outputs:
                     new_data = [i + j for i, j in zip(new_data, self.data_object.cumulative_deaths_by_cause[year][cause])]
                     stacked_data[cause] = new_data
                     ordered_list_of_stacks.append(cause)
-            ordered_list_of_stacks.append('other causes')
+            ordered_list_of_stacks.append('cumulative other deaths')
             for i in range(1, len(ordered_list_of_stacks)):
                 ax.fill_between(self.data_object.integer_ages,
                                 stacked_data[ordered_list_of_stacks[i - 1]][:-1],
@@ -622,11 +621,12 @@ class Outputs:
             if n_plot % columns == 0:
                 ax.set_ylabel('Proportion', fontsize=base_font_size)
             if n_plot == n_plots - 1:
-                ax.legend(handles, labels, bbox_to_anchor=(1.2, 1), loc=2, frameon=False, prop={'size': 9})
+                ax.legend(handles, labels, bbox_to_anchor=(1.13, .8), loc=2, frameon=False, prop={'size': 9})
             plt.setp(ax.get_xticklabels(), fontsize=base_font_size - 2)
             plt.setp(ax.get_yticklabels(), fontsize=base_font_size - 2)
             ax.set_title(year, fontsize=base_font_size + 2)
             ax.set_xlim((50., 89.))
             ax.set_ylim((0., 1.))
+        plt.tight_layout()
         figure.savefig('lifetable')
 
