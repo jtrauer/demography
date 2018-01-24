@@ -347,7 +347,8 @@ class Spring:
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
         self.grim_sheets_to_read = ['all-causes-combined',
-                                    'all-diseases-of-the-circulatory-system']
+                                    'all-diseases-of-the-circulatory-system',
+                                    'all-neoplasms']
         # 'all-certain-conditions-originating-in-the-perinatal-period',
         # 'all-certain-infectious-and-parasitic-diseases',
         # 'all-diseases-of-the-circulatory-system',
@@ -394,7 +395,13 @@ class Spring:
             = read_all_grim_sheets(self.grim_sheets_to_read)
 
         # restrict input array and find relevant years
-        self.grim_books_data['population']['adjusted_data'] = self.restrict_death_data()
+        self.grim_books_data['deaths']['adjusted_data'] \
+            = distribute_missing_across_agegroups(self.grim_books_data['deaths']['data'],
+                                                  self.grim_books_data['deaths']['age_groups'])
+        self.grim_books_data['population']['adjusted_data'] \
+            = restrict_population_to_relevant_years(self.grim_books_data['population']['data'],
+                                                    self.grim_books_data['deaths']['years'],
+                                                    self.grim_books_data['population']['years'])
 
         # find death rates from tidied arrays
         self.rates['unadjusted'] \
@@ -427,12 +434,7 @@ class Spring:
         Adjust for missing data, restrict population array to relevant years and calculate rates.
         """
 
-        self.grim_books_data['deaths']['adjusted_data'] \
-            = distribute_missing_across_agegroups(self.grim_books_data['deaths']['data'],
-                                                  self.grim_books_data['deaths']['age_groups'])
-        return restrict_population_to_relevant_years(self.grim_books_data['population']['data'],
-                                                     self.grim_books_data['deaths']['years'],
-                                                     self.grim_books_data['population']['years'])
+        return
 
     def find_average_rates(self):
         """
