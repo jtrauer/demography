@@ -178,7 +178,7 @@ def convert_grim_string(string_to_convert):
     if string_to_convert in conversion_dictionary:
         return conversion_dictionary[string_to_convert]
     else:
-        return string_to_convert
+        return string_to_convert[0].upper() + string_to_convert[1:].replace('-', ' ')
 
 
 def distribute_missing_across_agegroups(final_array, age_groups):
@@ -347,8 +347,8 @@ class Spring:
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
         self.grim_sheets_to_read = ['all-causes-combined',
-                                    'all-diseases-of-the-circulatory-system',
-                                    'all-neoplasms']
+                                    'all-external-causes-of-morbidity-and-mortality',
+                                    'suicide']
         # 'all-certain-conditions-originating-in-the-perinatal-period',
         # 'all-certain-infectious-and-parasitic-diseases',
         # 'all-diseases-of-the-circulatory-system',
@@ -524,7 +524,7 @@ class Outputs:
 
         self.data_object = data_object
 
-    def plot_death_rates_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(5e-4, 1e-2),
+    def plot_death_rates_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(1e-5, 1e-4),
                                    log_scale=True):
         """
         Create graph of total death rates by age groups over time.
@@ -580,7 +580,8 @@ class Outputs:
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
             ax.set_title('Death rates by cause for under ' + upper_age_limit[:2] + 's')
-            ax.set_ylim((0., 8e-3))
+            ax.set_ylim((0., 5e-4))
+            ax.set_xlim((1980., 2014.))
             ax.set_xlabel('Year', fontsize=10)
             ax.set_ylabel('Rate per capita per year', fontsize=10)
             plt.setp(ax.get_xticklabels(), fontsize=10)
