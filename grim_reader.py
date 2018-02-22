@@ -45,6 +45,25 @@ def convert_to_integer_if_possible(values_list):
     return values_found
 
 
+def read_standard_population():
+    """
+    Read in Australian Standard Population 2001 from ABS.
+    """
+
+    book = open_workbook('australian_standard_population_2001.xls')
+    sheet = book.sheet_by_name('Table_1')
+    data, titles = {}, sheet.row_values(5)
+    for i in range(sheet.nrows):
+        if sheet.col_values(titles.index(u'Persons'))[i] not in [u'', u'Persons']:
+            if sheet.col_values(titles.index(u'Age (years)'))[i] == u'100 and over':
+                age_key = 100
+            elif sheet.col_values(titles.index(u'Age (years)'))[i] == u'Total':
+                age_key = 'Total'
+            else:
+                age_key = int(sheet.col_values(titles.index(u'Age (years)'))[i])
+            data[age_key] = int(sheet.col_values(titles.index(u'Persons'))[i])
+
+
 def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5, gender_row_index=3):
     """
     Function to read a single GRIM-formatted spreadsheet.
@@ -379,7 +398,7 @@ class Spring:
         self.cumulative_deaths_by_cause = {}
         self.grim_books_data = {'population': {}, 'deaths': {}}
         self.rates = {}
-        self.averaged_rates = {}
+        self.average_rates_by_year = {}
         self.upper_age_limits_to_cut_at = ['70 to 74', '75 to 79']
 
         # read population data
@@ -392,6 +411,8 @@ class Spring:
         (self.grim_books_data['deaths']['age_groups'], self.grim_books_data['deaths']['years'],
          self.grim_books_data['deaths']['genders'], self.grim_books_data['deaths']['data']) \
             = read_all_grim_sheets(self.grim_sheets_to_read)
+
+        self.standard_population_data = read_standard_population()
 
         self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
@@ -420,27 +441,26 @@ class Spring:
         Find death rates by year averaged over age groups, but excluding the highest ones.
         """
 
-        self.averaged_rates['adjusted_data'] = {}
+        self.average_rates_by_year['adjusted_data'] = {}
         for upper_age_limit in self.upper_age_limits_to_cut_at:
             denominators \
                 = numpy.sum(self.grim_books_data['population']['adjusted_data'][
                             :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
                             self.grim_books_data['deaths']['genders'].index('Persons')], axis=0)
-            numerators = {}
-            self.averaged_rates['adjusted_data'][upper_age_limit] = {}
+
+            self.average_rates_by_year['adjusted_data'][upper_age_limit] = {}
             for cause in self.grim_sheets_to_read:
 
-                numerators[cause] = 0.
+                self.average_rates_by_year['adjusted_data'][upper_age_limit][cause] = numpy.zeros(len(denominators))
                 for age_group in self.grim_books_data['deaths']['age_groups'][
                                  :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit)]:
-                    numerators[cause] \
-                        += self.grim_books_data['deaths']['adjusted_data'][
-                           self.grim_books_data['deaths']['age_groups'].index(age_group), :,
-                           self.grim_books_data['deaths']['genders'].index('Persons'),
-                           self.grim_sheets_to_read.index(cause)]
-
-                self.averaged_rates['adjusted_data'][upper_age_limit][cause] \
-                    = [n / d for n, d in zip(numerators[cause], denominators)]
+                    self.average_rates_by_year['adjusted_data'][upper_age_limit][cause]\
+                        = [r + n / d
+                           for r, n, d in zip(self.average_rates_by_year['adjusted_data'][upper_age_limit][cause],
+                                              self.grim_books_data['deaths']['adjusted_data'][
+                                              self.grim_books_data['deaths']['age_groups'].index(age_group),
+                                              :, self.grim_books_data['deaths']['genders'].index('Persons'),
+                                              self.grim_sheets_to_read.index(cause)], denominators)]
 
     def find_life_tables(self, karup_king=True):
         """
@@ -567,7 +587,7 @@ class Outputs:
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             for cause in self.data_object.grim_sheets_to_read:
                 ax.plot(self.data_object.grim_books_data['deaths']['years'],
-                        self.data_object.averaged_rates['adjusted_data'][upper_age_limit][cause],
+                        self.data_object.average_rates_by_year['adjusted_data'][upper_age_limit][cause],
                         label=convert_grim_string(cause))
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
