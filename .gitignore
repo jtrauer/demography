@@ -1,6 +1,8 @@
 
 *.png
 *.xml
-.idea*
+*.iml
 *.iml
 *.pyc
+venv
+venv1
