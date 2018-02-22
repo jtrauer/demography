@@ -413,9 +413,9 @@ class Spring:
         self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
         # find average rates across groups
-        self.find_average_rates()
+        self.find_average_rates_by_year()
 
-    def find_average_rates(self):
+    def find_average_rates_by_year(self):
         """
         Find death rates by year averaged over age groups, but excluding the highest ones.
         """
@@ -429,13 +429,18 @@ class Spring:
             numerators = {}
             self.averaged_rates['adjusted_data'][upper_age_limit] = {}
             for cause in self.grim_sheets_to_read:
-                numerators[cause] \
-                    = numpy.sum(self.grim_books_data['deaths']['adjusted_data'][
-                                :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit), :,
-                                self.grim_books_data['deaths']['genders'].index('Persons'),
-                                self.grim_sheets_to_read.index(cause)], axis=0)
+
+                numerators[cause] = 0.
+                for age_group in self.grim_books_data['deaths']['age_groups'][
+                                 :self.grim_books_data['deaths']['age_groups'].index(upper_age_limit)]:
+                    numerators[cause] \
+                        += self.grim_books_data['deaths']['adjusted_data'][
+                           self.grim_books_data['deaths']['age_groups'].index(age_group), :,
+                           self.grim_books_data['deaths']['genders'].index('Persons'),
+                           self.grim_sheets_to_read.index(cause)]
+
                 self.averaged_rates['adjusted_data'][upper_age_limit][cause] \
-                    = [i / j for i, j in zip(numerators[cause], denominators)]
+                    = [n / d for n, d in zip(numerators[cause], denominators)]
 
     def find_life_tables(self, karup_king=True):
         """
