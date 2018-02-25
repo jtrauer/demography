@@ -65,6 +65,19 @@ def read_standard_population():
     return data
 
 
+def exclude_non_integer_elements_from_dict(dictionary):
+    """
+    Exclude any elements from a dictionary that do not have an integer as their key.
+
+    Args:
+        dictionary: The original dictionary that may have a mix of integer and non-integer keys
+    Returns:
+        Dictionary with only integer keys
+    """
+
+    return {i: dictionary[i] for i in dictionary if type(i) == int}
+
+
 def sum_dict_over_brackets(dictionary, bracket_size=5):
     """
     Sums all the values within a regular range of integer values referring to the keys of the dictionary being analysed.
@@ -76,17 +89,16 @@ def sum_dict_over_brackets(dictionary, bracket_size=5):
         summed_dictionary: A new dictionary with keys the lower limits of the summations
     """
 
-    # ignore any non-integer keys in the dictionary
-    revised_dict = {i: dictionary[i] for i in dictionary if type(i) == int}
+    revised_dict = exclude_non_integer_elements_from_dict(dictionary)
 
     # initialise
-    summed_dictionary, within_bracket_n = {}, 0
+    summed_dictionary, within_bracket_n = {0: 0}, 0
 
     # cycle through all integer values that could be present in dictionary
-    for i in range(max(revised_dict.keys())):
+    for i in range(max(revised_dict.keys()) + 1):
 
         # skip on and create new key to summed dictionary once finished the previous key
-        if i % bracket_size == 0:
+        if i % bracket_size == 0 and i > 0:
             within_bracket_n += bracket_size
             summed_dictionary[within_bracket_n] = 0
 
@@ -95,6 +107,26 @@ def sum_dict_over_brackets(dictionary, bracket_size=5):
 
     # return summed dictionary
     return summed_dictionary
+
+
+def sum_last_elements_of_dict(dictionary, value=85):
+    """
+    Aggregate the upper values of an integer-keyed dictionary into one.
+
+    Args:
+        dictionary: The dictionary that needs to be summed
+        value: The highest value of the revised dictionary, to put all of the upper groups into
+    Returns:
+        dictionary: with upper values summed into the top key
+    """
+
+    revised_dict = exclude_non_integer_elements_from_dict(dictionary)
+    assert value in revised_dict, 'Requested value for summing not found in dictionary'
+    for k in revised_dict.keys():
+        if k > value:
+            revised_dict[value] += revised_dict[k]
+            del revised_dict[k]
+    return revised_dict
 
 
 def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5, gender_row_index=3):
@@ -446,8 +478,7 @@ class Spring:
             = read_all_grim_sheets(self.grim_sheets_to_read)
 
         self.standard_population_data = read_standard_population()
-
-        # summed_dictionary = sum_dict_over_brackets(self.standard_population_data)
+        self.revised_population_data = sum_last_elements_of_dict(sum_dict_over_brackets(self.standard_population_data))
 
         self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
