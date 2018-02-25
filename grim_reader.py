@@ -67,21 +67,33 @@ def read_standard_population():
 
 def sum_dict_over_brackets(dictionary, bracket_size=5):
     """
-    Sums all the values within a range of integer values referring to the keys of the dictionary being analysed.
+    Sums all the values within a regular range of integer values referring to the keys of the dictionary being analysed.
 
     Args:
         dictionary: The dictionary to be summed
+        bracket_size: Integer for the width of the brackets to sum the keys over
     Returns:
         summed_dictionary: A new dictionary with keys the lower limits of the summations
     """
 
+    # ignore any non-integer keys in the dictionary
     revised_dict = {i: dictionary[i] for i in dictionary if type(i) == int}
+
+    # initialise
     summed_dictionary, within_bracket_n = {}, 0
+
+    # cycle through all integer values that could be present in dictionary
     for i in range(max(revised_dict.keys())):
+
+        # skip on and create new key to summed dictionary once finished the previous key
         if i % bracket_size == 0:
             within_bracket_n += bracket_size
             summed_dictionary[within_bracket_n] = 0
+
+        # increment dictionary
         summed_dictionary[within_bracket_n] += revised_dict[i]
+
+    # return summed dictionary
     return summed_dictionary
 
 
