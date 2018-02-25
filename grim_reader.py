@@ -477,8 +477,12 @@ class Spring:
          self.grim_books_data['deaths']['genders'], self.grim_books_data['deaths']['data']) \
             = read_all_grim_sheets(self.grim_sheets_to_read)
 
+        # read in an process the Australian standard 2001 population data
         self.standard_population_data = read_standard_population()
         self.revised_population_data = sum_last_elements_of_dict(sum_dict_over_brackets(self.standard_population_data))
+        self.standard_population_props \
+            = {key: self.revised_population_data[key] / float(sum(self.revised_population_data.values()))
+               for key in self.revised_population_data}
 
         self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
