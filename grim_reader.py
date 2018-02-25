@@ -62,6 +62,27 @@ def read_standard_population():
             else:
                 age_key = int(sheet.col_values(titles.index(u'Age (years)'))[i])
             data[age_key] = int(sheet.col_values(titles.index(u'Persons'))[i])
+    return data
+
+
+def sum_dict_over_brackets(dictionary, bracket_size=5):
+    """
+    Sums all the values within a range of integer values referring to the keys of the dictionary being analysed.
+
+    Args:
+        dictionary: The dictionary to be summed
+    Returns:
+        summed_dictionary: A new dictionary with keys the lower limits of the summations
+    """
+
+    revised_dict = {i: dictionary[i] for i in dictionary if type(i) == int}
+    summed_dictionary, within_bracket_n = {}, 0
+    for i in range(max(revised_dict.keys())):
+        if i % bracket_size == 0:
+            within_bracket_n += bracket_size
+            summed_dictionary[within_bracket_n] = 0
+        summed_dictionary[within_bracket_n] += revised_dict[i]
+    return summed_dictionary
 
 
 def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5, gender_row_index=3):
@@ -413,6 +434,8 @@ class Spring:
             = read_all_grim_sheets(self.grim_sheets_to_read)
 
         self.standard_population_data = read_standard_population()
+
+        # summed_dictionary = sum_dict_over_brackets(self.standard_population_data)
 
         self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
