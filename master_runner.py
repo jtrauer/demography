@@ -13,3 +13,5 @@ outputs_object.plot_death_rates_over_time(cause='all-diseases-of-the-circulatory
 outputs_object.plot_deaths_by_cause()
 outputs_object.plot_cumulative_survival()
 
+
+outputs_object.plot_journal_figure()

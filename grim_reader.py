@@ -2,6 +2,7 @@
 from xlrd import open_workbook
 import numpy
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 
 ''' static methods'''
@@ -728,4 +729,33 @@ class Outputs:
             ax.set_title(year, fontsize=base_font_size + 2)
         plt.tight_layout()
         figure.savefig('lifetable')
+
+    def plot_journal_figure(self):
+
+        gender = 'Persons'
+        figure = plt.figure()
+        cause = 'all-causes-combined'
+        plt.style.use('ggplot')
+        plt.tight_layout()
+        y_limits = {0: (0., .24), 1: (4e-4, .26)}
+
+        for n, log_scale in enumerate([False, True]):
+            ax = figure.add_subplot(2, 2, (n + 1) * 2)
+            iterations = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
+            colours = [plt.cm.Reds(x) for x in numpy.linspace(0., 1., iterations)]
+            year_values = self.data_object.grim_books_data['deaths']['years']
+            for i in range(5, iterations):
+                rates = self.data_object.rates['unadjusted'][i, :,
+                        self.data_object.grim_books_data['deaths']['genders'].index(gender),
+                        self.data_object.grim_sheets_to_read.index(cause)]
+                label = self.data_object.grim_books_data['deaths']['age_groups'][i]
+                ax.semilogy(year_values, rates, label=label, color=colours[i]) if log_scale \
+                    else ax.plot(year_values, rates, label=label, color=colours[i])
+            ax.set_xlim(left=1964., right=2014.)
+            ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0f' % (y * 1e3)))
+            ax.set_ylim(y_limits[n])
+
+        figure.savefig('journal_figure')
+
+
 
