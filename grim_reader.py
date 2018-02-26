@@ -613,8 +613,8 @@ class Outputs:
 
         self.data_object = data_object
 
-    def plot_death_rates_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(2e-5, .18),
-                                   log_scale=False, split_by_gender=True):
+    def plot_rates_by_age_group_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(2e-5, .18),
+                                          log_scale=False, split_by_gender=True):
         """
         Create graph of total death rates by age groups over time.
 
@@ -669,55 +669,10 @@ class Outputs:
                 ax.set_ylim(bottom=0., top=9e-3)
                 ax.set_xlabel('Year', fontsize=10)
                 ax.set_ylabel('Rate per capita per year', fontsize=10)
-                plt.setp(ax.get_xticklabels(), fontsize=10)
-                plt.setp(ax.get_yticklabels(), fontsize=10)
+                ax.tick_params(labelsize=8)
                 figure.savefig('mortality_figure_cause' + '_' + analysis + upper_age_limit_string)
 
-    def plot_cumulative_survival(self):
-        """
-        Plot cumulative survival graphs by year and age.
-        """
-
-        figure = plt.figure()
-        n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 8, 25, 2014
-        plt.style.use('ggplot')
-        for n_plot in range(n_plots):
-            year = last_year + n_plot * year_spacing - (n_plots - 1) * year_spacing
-            ax = figure.add_subplot(rows, columns, n_plot + 1)
-            stacked_data = {'base': numpy.zeros(len(self.data_object.life_tables[year])),
-                            'survival': self.data_object.life_tables[year],
-                            'other': numpy.ones(len(self.data_object.life_tables[year]))}
-            ordered_list_of_stacks = ['base', 'survival']
-            new_data = self.data_object.life_tables[year]
-            for cause in self.data_object.cumulative_deaths_by_cause[year]:
-                if cause != 'all-causes-combined':
-                    new_data \
-                        = [i + j for i, j in zip(new_data, self.data_object.cumulative_deaths_by_cause[year][cause])]
-                    stacked_data[cause] = new_data
-                    ordered_list_of_stacks.append(cause)
-            ordered_list_of_stacks.append('other')
-            for i in range(1, len(ordered_list_of_stacks)):
-                ax.fill_between(self.data_object.integer_ages,
-                                stacked_data[ordered_list_of_stacks[i - 1]][:-1],
-                                stacked_data[ordered_list_of_stacks[i]][:-1],
-                                color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
-                                label=convert_grim_string(ordered_list_of_stacks[i], capitalise_first_letter=True))
-            handles, labels = ax.get_legend_handles_labels()
-            if n_plot >= columns:
-                ax.set_xlabel('Age', fontsize=base_font_size)
-            if n_plot % columns == 0:
-                ax.set_ylabel('Proportion', fontsize=base_font_size)
-            if n_plot == n_plots - 1:
-                ax.legend(handles, labels, bbox_to_anchor=(1.25, .8), loc=2, frameon=False, prop={'size': 9})
-            plt.setp(ax.get_xticklabels(), fontsize=base_font_size - 2)
-            plt.setp(ax.get_yticklabels(), fontsize=base_font_size - 2)
-            ax.set_xlim(left=50., right=89.)
-            ax.set_ylim(bottom=0., top=1.)
-            ax.set_title(year, fontsize=base_font_size + 2)
-        plt.tight_layout()
-        figure.savefig('lifetable')
-
-    def plot_journal_figure(self):
+    def plot_journal_figure_1(self):
         """
         Create figure for article to be submitted to journal.
         """
@@ -726,7 +681,16 @@ class Outputs:
         figure = plt.figure()
         plt.style.use('ggplot')
         plt.tight_layout()
-        y_limits = {0: (0., .24), 1: (4e-4, .26)}
+
+        ax1 = figure.add_subplot(2, 2, 1)
+        ax2 = figure.add_subplot(2, 2, 3)
+        colours = [list(plt.rcParams['axes.prop_cycle'])[i] for i in [2, 0, 1]]
+        for c, cause in enumerate(self.data_object.grim_sheets_to_read):
+            years = self.data_object.grim_books_data['deaths']['years']
+            data = self.data_object.average_rates_by_year['standardised_adjusted_data']['85+'][cause]
+            label = convert_grim_string(cause)
+            ax1.plot(years, data, label=label, color=colours[c]['color'])
+            ax2.semilogy(years, data, label=label, color=colours[c]['color'])
 
         # iterating over log axis and linear
         for n, log_scale in enumerate([False, True]):
@@ -737,15 +701,17 @@ class Outputs:
             # plot each age group's rate against years
             self.plot_rates_by_year(ax, 'all-causes-combined', 'Persons', log_scale)
 
-            # clean axis for journal article figure
+        # clean axis for journal article figure
+        y_limits = {0: (0., .012), 1: (7e-4, .012), 2: (0., .26), 3: (4e-4, .26)}
+        for a, ax in enumerate(figure.axes):
             ax.set_xlim(left=1964., right=2014.)
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0f' % (y * 1e3)))
-            ax.set_ylim(y_limits[n])
+            ax.set_ylim(y_limits[a])
             ax.tick_params(labelsize=8)
             ax.tick_params(axis='y', rotation=90)
 
         # save
-        figure.savefig('journal_figure')
+        figure.savefig('journal_figure', dpi=1000)
 
     def plot_rates_by_year(self, ax, cause, gender, log_scale):
         """
@@ -773,3 +739,50 @@ class Outputs:
             label = self.data_object.grim_books_data['deaths']['age_groups'][i]
             ax.semilogy(year_values, rates, label=label, color=colours[i]) if log_scale \
                 else ax.plot(year_values, rates, label=label, color=colours[i])
+
+    def plot_cumulative_survival(self):
+        """
+        Plot cumulative survival graphs by year and age.
+        """
+
+        figure = plt.figure()
+        n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 8, 25, 2014
+        plt.style.use('ggplot')
+        plt.tight_layout()
+        for n_plot in range(n_plots):
+            year = last_year + n_plot * year_spacing - (n_plots - 1) * year_spacing
+            ax = figure.add_subplot(rows, columns, n_plot + 1)
+            stacked_data = {'base': numpy.zeros(len(self.data_object.life_tables[year])),
+                            'survival': self.data_object.life_tables[year],
+                            'other': numpy.ones(len(self.data_object.life_tables[year]))}
+            ordered_list_of_stacks = ['base', 'survival']
+            new_data = self.data_object.life_tables[year]
+            for cause in self.data_object.cumulative_deaths_by_cause[year]:
+                if cause != 'all-causes-combined':
+                    new_data \
+                        = [i + j for i, j in zip(new_data, self.data_object.cumulative_deaths_by_cause[year][cause])]
+                    stacked_data[cause] = new_data
+                    ordered_list_of_stacks.append(cause)
+            ordered_list_of_stacks.append('other')
+            for i in range(1, len(ordered_list_of_stacks)):
+                ax.fill_between(self.data_object.integer_ages,
+                                stacked_data[ordered_list_of_stacks[i - 1]][:-1],
+                                stacked_data[ordered_list_of_stacks[i]][:-1],
+                                color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
+                                label=convert_grim_string(ordered_list_of_stacks[i], capitalise_first_letter=True))
+            handles, labels = ax.get_legend_handles_labels()
+            if n_plot >= columns:
+                pass
+                # ax.set_xlabel('Age', fontsize=base_font_size)
+            if n_plot % columns == 0:
+                pass
+                # ax.set_ylabel('Proportion', fontsize=base_font_size)
+            if n_plot == n_plots - 1:
+                ax.legend(handles, labels, bbox_to_anchor=(1.25, .8), loc=2, frameon=False, prop={'size': 9})
+            ax.tick_params(labelsize=8)
+            ax.set_xlim(left=50., right=89.)
+            ax.set_ylim(bottom=0., top=1.)
+            ax.set_title(year, fontsize=10)
+        plt.tight_layout()
+        figure.savefig('lifetable', dpi=1000)
+
