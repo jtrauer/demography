@@ -65,7 +65,7 @@ def read_standard_population():
     return data
 
 
-def exclude_non_integer_elements_from_dict(dictionary):
+def exclude_non_integer_keys_from_dict(dictionary):
     """
     Exclude any elements from a dictionary that do not have an integer as their key.
 
@@ -89,29 +89,30 @@ def sum_dict_over_brackets(dictionary, bracket_size=5):
         summed_dictionary: A new dictionary with keys the lower limits of the summations
     """
 
-    revised_dict = exclude_non_integer_elements_from_dict(dictionary)
+    revised_dict = exclude_non_integer_keys_from_dict(dictionary)
 
     # initialise
-    summed_dictionary, within_bracket_n = {0: 0}, 0
+    summed_dictionary, working_bracket = {0: 0}, 0
 
     # cycle through all integer values that could be present in dictionary
     for i in range(max(revised_dict.keys()) + 1):
 
-        # skip on and create new key to summed dictionary once finished the previous key
+        # move on to next key, creating new key to summed dictionary once finished with a key
         if i % bracket_size == 0 and i > 0:
-            within_bracket_n += bracket_size
-            summed_dictionary[within_bracket_n] = 0
+            working_bracket += bracket_size
+            summed_dictionary[working_bracket] = 0
 
         # increment dictionary
-        summed_dictionary[within_bracket_n] += revised_dict[i]
+        summed_dictionary[working_bracket] += revised_dict[i]
 
     # return summed dictionary
     return summed_dictionary
 
 
-def sum_last_elements_of_dict(dictionary, value=85):
+def sum_last_elements_of_dict(dictionary, value):
     """
-    Aggregate the upper values of an integer-keyed dictionary into one.
+    Aggregate the upper values of an integer-keyed dictionary into one, for all keys valued above a certain threshold
+    specified by value.
 
     Args:
         dictionary: The dictionary that needs to be summed
@@ -120,16 +121,34 @@ def sum_last_elements_of_dict(dictionary, value=85):
         dictionary: with upper values summed into the top key
     """
 
-    revised_dict = exclude_non_integer_elements_from_dict(dictionary)
+    revised_dict = exclude_non_integer_keys_from_dict(dictionary)
     assert value in revised_dict, 'Requested value for summing not found in dictionary'
-    for k in revised_dict.keys():
-        if k > value:
-            revised_dict[value] += revised_dict[k]
-            del revised_dict[k]
+    for key in revised_dict.keys():
+        if key > value:
+            revised_dict[value] += revised_dict[key]
+            del revised_dict[key]
     return revised_dict
 
 
-def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5, gender_row_index=3):
+def sum_last_elements_of_list(input_list, index):
+    """
+    The equivalent to the previous function for lists. Now unused.
+    
+    Args:
+        input_list: The input list to have its last elements summed
+        index: The index of the list to have the last values added to 
+    """
+
+    revised_list = []
+    for i in range(len(input_list)):
+        if i <= index:
+            revised_list.append(input_list[i])
+        else:
+            revised_list[index] += input_list[i]
+    return revised_list
+
+
+def read_single_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5, gender_row_index=3):
     """
     Function to read a single GRIM-formatted spreadsheet.
 
@@ -149,12 +168,7 @@ def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5,
 
     # initialise
     sheet = workbook.sheet_by_name(sheet_name)
-    data_type = []
-    titles = {}
-    working_array = {}
-    gender = 'start'
-    new_layer = False
-    columns_to_ignore = ['', 'Total']
+    data_type, titles, working_array, gender, new_layer, columns_to_ignore = [], {}, {}, 'start', False, ['', 'Total']
 
     for c in range(sheet.ncols):
 
@@ -188,15 +202,14 @@ def read_grim_sheet(workbook, sheet_name, years_to_keep=None, title_row_index=5,
             titles[gender].append(title)
 
     # depth stack the arrays created above
-    age_groups = titles['Persons']
-    genders = []
+    age_groups, genders = titles['Persons'], []
     final_array \
         = numpy.array(numpy.zeros(shape=(working_array['Persons'].shape[0], working_array['Persons'].shape[1], 0)))
     for gender in working_array:
         final_array = numpy.dstack((final_array, working_array[gender]))
         genders.append(gender)
 
-    # if all data is zeros for that row across all layers, discard that row (year)
+    # if all data are zeros for that row across all layers, discard that row (year)
     if years_to_keep is None:
         years_to_keep = numpy.any(numpy.all(final_array, axis=0), axis=1)
     final_array = final_array[:, years_to_keep, :]
@@ -222,17 +235,14 @@ def read_all_grim_sheets(sheet_names):
     for n, name in enumerate(sheet_names):
 
         # ensure we keep the years from the all causes sheet, as there are several years with zero data in other sheets
-        if n == 0:
-            years_to_keep = None
-        else:
-            years_to_keep = years_to_keep
+        years_to_keep = None if n == 0 else years_to_keep
 
         # open excel workbook and find deaths sheet
         book = open_workbook('grim-' + name + '-2017.xlsx')
 
         # read with reading function above
         age_groups, years, genders, sheet_array, years_to_keep \
-            = read_grim_sheet(book, 'Deaths', years_to_keep=years_to_keep)
+            = read_single_grim_sheet(book, 'Deaths', years_to_keep=years_to_keep)
         if name == sheet_names[0]: final_array = numpy.array(numpy.zeros(shape=list(sheet_array.shape) + [0L]))
         sheet_array = numpy.expand_dims(sheet_array, axis=3)
 
@@ -242,9 +252,9 @@ def read_all_grim_sheets(sheet_names):
     return age_groups, years, genders, final_array
 
 
-def convert_grim_string(string_to_convert):
+def convert_grim_string(string_to_convert, capitalise_first_letter=False):
     """
-    Just a function to access a dictionary of string conversions. Will gradually build out as we need to for outputting.
+    Simple function to access a dictionary of string conversions. Will gradually build out as needed for outputting.
 
     Args:
         string_to_convert: The raw input string that isn't nicely formatted
@@ -253,22 +263,27 @@ def convert_grim_string(string_to_convert):
     """
 
     conversion_dictionary \
-        = {'all-external-causes-of-morbidity-and-mortality': 'External causes',
-           'all-diseases-of-the-circulatory-system': 'Cardiovascular disease',
-           'all-neoplasms': 'Neoplasms',
-           'all-causes-combined': 'All causes',
-           'Persons': 'Both genders'}
+        = {'all-external-causes-of-morbidity-and-mortality': 'external causes',
+           'all-diseases-of-the-circulatory-system': 'cardiovascular disease',
+           'all-neoplasms': 'cancer',
+           'all-causes-combined': 'all causes',
+           'Persons': 'both genders'}
 
     if string_to_convert in conversion_dictionary:
-        return conversion_dictionary[string_to_convert]
+        string_to_return = conversion_dictionary[string_to_convert]
     else:
-        return string_to_convert[0].upper() + string_to_convert[1:].replace('-', ' ')
+        string_to_return = string_to_convert[0].upper() + string_to_convert[1:].replace('-', ' ')
+
+    if capitalise_first_letter:
+        return string_to_return[0].capitalize() + string_to_return[1:]
+    else:
+        return string_to_return
 
 
 def distribute_missing_across_agegroups(final_array, age_groups):
     """
-    Distribute the missing data proportionately across age groups. Note that is typically less than 0.1% of all data,
-    but probably still better to do to improve the sense of the absolute rates of death.
+    Distribute the data missing age groups proportionately across remaining age groups. Note that is typically less than
+    0.1% of all data, but still preferable to do this to improve the sense of the absolute rates of death.
 
     Args:
         final_array: The final data array
@@ -312,7 +327,8 @@ def find_rates_from_deaths_and_populations(death_array, pop_array, n_sheets):
 def restrict_population_to_relevant_years(pop_array, data_years, population_years):
     """
     Restrict the population array (which comes from the GRIM data with more years than the death data come with) to the
-    years that are relevant to the death data being read in.
+    years that are relevant to the death data being read in. Does so inclusive of the highest value specified in
+    data_years.
 
     Args:
         pop_array: The full, unrestricted population array
@@ -321,18 +337,6 @@ def restrict_population_to_relevant_years(pop_array, data_years, population_year
     """
 
     return pop_array[:, population_years.index(data_years[0]):population_years.index(data_years[-1]) + 1, :]
-
-
-def find_string_from_dict(string, capitalise=True):
-
-    string_dictionary = {'all-diseases-of-the-circulatory-system': 'cumulative cardiovascular deaths',
-                         'all-neoplasms': 'cumulative cancer deaths',
-                         'all-causes-combined': 'all causes'}
-    string_to_return = string_dictionary[string] if string in string_dictionary else string
-    if capitalise:
-        return string_to_return[0].upper() + string_to_return[1:]
-    else:
-        return string_to_return
 
 
 def find_agegroup_values_from_strings(age_group_strings):
@@ -459,18 +463,14 @@ class Spring:
         # 'land-transport-accidents', 'liver-disease']
 
         self.integer_ages = range(90)
-        self.life_tables = {}
-        self.cumulative_deaths_by_cause = {}
+        self.life_tables, self.cumulative_deaths_by_cause, self.rates, self.average_rates_by_year = {}, {}, {}, {}
         self.grim_books_data = {'population': {}, 'deaths': {}}
-        self.rates = {}
-        self.average_rates_by_year = {}
-        self.upper_age_limits_to_cut_at = ['70 to 74', '75 to 79']
 
         # read population data
         book = open_workbook('grim-' + self.grim_sheets_to_read[0] + '-2017.xlsx')
         (self.grim_books_data['population']['age_groups'], self.grim_books_data['population']['years'],
          self.grim_books_data['population']['genders'], self.grim_books_data['population']['data'], _) \
-            = read_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
+            = read_single_grim_sheet(book, 'Populations', title_row_index=14, gender_row_index=12)
 
         # read death data spreadsheets
         (self.grim_books_data['deaths']['age_groups'], self.grim_books_data['deaths']['years'],
@@ -479,11 +479,12 @@ class Spring:
 
         # read in an process the Australian standard 2001 population data
         self.standard_population_data = read_standard_population()
-        self.revised_population_data = sum_last_elements_of_dict(sum_dict_over_brackets(self.standard_population_data))
-        self.standard_population_props \
-            = {key: self.revised_population_data[key] / float(sum(self.revised_population_data.values()))
-               for key in self.revised_population_data}
+        self.bracketed_standard_pop = sum_dict_over_brackets(self.standard_population_data)
+        self.summed_bracketed_pop = sum_last_elements_of_dict(self.bracketed_standard_pop, 85)
 
+        # set any age limits that we are interested to cut at, including the last one (other than Missing, hence -2)
+        # note that this indexing is inclusive, although some code below may not agree with that yet
+        self.upper_age_limits_to_cut_at = ['70 to 74', '75 to 79']
         self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
 
         # restrict input array and find relevant years
@@ -501,9 +502,7 @@ class Spring:
                                                      self.grim_books_data['population']['adjusted_data'],
                                                      len(self.grim_sheets_to_read))
 
-        self.upper_age_limits_to_cut_at.append(self.grim_books_data['deaths']['age_groups'][-2])
-
-        # find average rates across groups
+        # find average rates summed across age groups, for each calendar year
         self.find_average_rates_by_year()
 
     def find_average_rates_by_year(self):
@@ -512,26 +511,42 @@ class Spring:
         """
 
         g = self.grim_books_data['deaths']['genders'].index('Persons')
-        self.average_rates_by_year['adjusted_data'] = {}
-        # self.average_rates_by_year['weighted_adjusted_data'] = {}
+        self.average_rates_by_year['adjusted_data'], self.average_rates_by_year['standardised_adjusted_data'] = {}, {}
         for upper_age_limit in self.upper_age_limits_to_cut_at:
-            up = self.grim_books_data['deaths']['age_groups'].index(upper_age_limit)
+            self.average_rates_by_year['adjusted_data'][upper_age_limit], \
+                self.average_rates_by_year['standardised_adjusted_data'][upper_age_limit] = {}, {}
+
+            # index for one up from the age group of interest, to make indexing inclusive
+            up = self.grim_books_data['deaths']['age_groups'].index(upper_age_limit) + 1
+
+            # denominator for unweighted calculations
             denominator = numpy.sum(self.grim_books_data['population']['adjusted_data'][:up, :, g], axis=0)
-            self.average_rates_by_year['adjusted_data'][upper_age_limit] = {}
-            # self.average_rates_by_year['weighted_adjusted_data'][upper_age_limit] = {}
+
+            # restrict standard populations to relevant age groups
+            restricted_standard_pop = {key: self.summed_bracketed_pop[key] for key in self.summed_bracketed_pop
+                                       if key < int(upper_age_limit[:2])}
+
+            # normalise and create list ordered by age group
+            standard_pop_props = {key: restricted_standard_pop[key] / float(sum(restricted_standard_pop.values()))
+                                  for key in restricted_standard_pop}
+            age_weights = [standard_pop_props[key] for key in sorted(standard_pop_props.keys())]
+
+            # for each cause of death
             for c, cause in enumerate(self.grim_sheets_to_read):
-                numerator = numpy.sum(self.grim_books_data['deaths']['adjusted_data'][:up, :, g, c], axis=0)
+
+                # crude
                 self.average_rates_by_year['adjusted_data'][upper_age_limit][cause] \
-                    = numpy.divide(numerator, denominator)
-                # self.average_rates_by_year['weighted_adjusted_data'][upper_age_limit][cause] \
-                #     = numpy.zeros(len(denominator))
-                # for a, agegroup in enumerate(self.grim_books_data['deaths']['age_groups'][:up]):
-                #     self.average_rates_by_year['weighted_adjusted_data'][upper_age_limit][cause] \
-                #         = [r + n / d * w for r, n, d, w
-                #            in zip(self.average_rates_by_year['weighted_adjusted_data'][upper_age_limit][cause],
-                #                   self.grim_books_data['deaths']['adjusted_data'][a, :, g, c],
-                #                   self.grim_books_data['population']['adjusted_data'][a, :, g],
-                #                   [1. / 19.] * len(self.grim_books_data['deaths']['age_groups'][:up]))]
+                    = numpy.divide(numpy.sum(self.grim_books_data['deaths']['adjusted_data'][:up, :, g, c], axis=0),
+                                   denominator)
+
+                # standardised
+                self.average_rates_by_year['standardised_adjusted_data'][upper_age_limit][cause] = []
+                for y in range(len(self.grim_books_data['deaths']['years'])):
+                    self.average_rates_by_year['standardised_adjusted_data'][upper_age_limit][cause].append(
+                        sum([n / d * w for n, d, w in zip(
+                            self.grim_books_data['deaths']['adjusted_data'][:up, y, g, c],
+                            self.grim_books_data['population']['adjusted_data'][:up, y, g],
+                            age_weights[:up])]))
 
     def find_life_tables(self, karup_king=True):
         """
@@ -630,10 +645,8 @@ class Outputs:
                         self.data_object.grim_books_data['deaths']['genders'].index(gender),
                         self.data_object.grim_sheets_to_read.index(cause)]
                 label = self.data_object.grim_books_data['deaths']['age_groups'][i]
-                if log_scale:
-                    ax.semilogy(year_values, rates, label=label, color=colours[i])
-                else:
-                    ax.plot(year_values, rates, label=label, color=colours[i])
+                ax.semilogy(year_values, rates, label=label, color=colours[i]) if log_scale \
+                    else ax.plot(year_values, rates, label=label, color=colours[i])
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
@@ -649,28 +662,28 @@ class Outputs:
         Deaths by cause with limitation by age group and with age groups unlimited.
         """
 
-        for upper_age_limit in self.data_object.upper_age_limits_to_cut_at:
-            upper_age_limit_string = '' \
-                if upper_age_limit == self.data_object.grim_books_data['deaths']['age_groups'][-2] \
-                else ', under ' + upper_age_limit[:2] + 's'
-
-            figure = plt.figure()
-            ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
-            for cause in self.data_object.grim_sheets_to_read:
-                ax.plot(self.data_object.grim_books_data['deaths']['years'],
-                        self.data_object.average_rates_by_year['adjusted_data'][upper_age_limit][cause],
-                        label=convert_grim_string(cause))
-            handles, labels = ax.get_legend_handles_labels()
-            ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-                      prop={'size': 7})
-            ax.set_title('Death rates by cause' + upper_age_limit_string)
-            ax.set_ylim((0., 9e-3))
-            ax.set_xlim((1964., 2014.))
-            ax.set_xlabel('Year', fontsize=10)
-            ax.set_ylabel('Rate per capita per year', fontsize=10)
-            plt.setp(ax.get_xticklabels(), fontsize=10)
-            plt.setp(ax.get_yticklabels(), fontsize=10)
-            figure.savefig('mortality_figure_cause' + upper_age_limit_string)
+        for analysis in ['', 'standardised_']:
+            for upper_age_limit in self.data_object.upper_age_limits_to_cut_at:
+                upper_age_limit_string = '' \
+                    if upper_age_limit == self.data_object.grim_books_data['deaths']['age_groups'][-2] \
+                    else ', under ' + upper_age_limit[-2:] + 's'
+                figure = plt.figure()
+                ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
+                for cause in self.data_object.grim_sheets_to_read:
+                    ax.plot(self.data_object.grim_books_data['deaths']['years'],
+                            self.data_object.average_rates_by_year[analysis + 'adjusted_data'][upper_age_limit][cause],
+                            label=convert_grim_string(cause))
+                handles, labels = ax.get_legend_handles_labels()
+                ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                          prop={'size': 7})
+                ax.set_title('Death rates by cause' + upper_age_limit_string)
+                ax.set_xlim(left=1964., right=2014.)
+                ax.set_ylim(bottom=0., top=9e-3)
+                ax.set_xlabel('Year', fontsize=10)
+                ax.set_ylabel('Rate per capita per year', fontsize=10)
+                plt.setp(ax.get_xticklabels(), fontsize=10)
+                plt.setp(ax.get_yticklabels(), fontsize=10)
+                figure.savefig('mortality_figure_cause' + '_' + analysis + upper_age_limit_string)
 
     def plot_cumulative_survival(self):
         """
@@ -685,33 +698,34 @@ class Outputs:
             ax = figure.add_subplot(rows, columns, n_plot + 1)
             stacked_data = {'base': numpy.zeros(len(self.data_object.life_tables[year])),
                             'survival': self.data_object.life_tables[year],
-                            'cumulative other deaths': numpy.ones(len(self.data_object.life_tables[year]))}
+                            'other': numpy.ones(len(self.data_object.life_tables[year]))}
             ordered_list_of_stacks = ['base', 'survival']
             new_data = self.data_object.life_tables[year]
             for cause in self.data_object.cumulative_deaths_by_cause[year]:
                 if cause != 'all-causes-combined':
-                    new_data = [i + j for i, j in zip(new_data, self.data_object.cumulative_deaths_by_cause[year][cause])]
+                    new_data \
+                        = [i + j for i, j in zip(new_data, self.data_object.cumulative_deaths_by_cause[year][cause])]
                     stacked_data[cause] = new_data
                     ordered_list_of_stacks.append(cause)
-            ordered_list_of_stacks.append('cumulative other deaths')
+            ordered_list_of_stacks.append('other')
             for i in range(1, len(ordered_list_of_stacks)):
                 ax.fill_between(self.data_object.integer_ages,
                                 stacked_data[ordered_list_of_stacks[i - 1]][:-1],
                                 stacked_data[ordered_list_of_stacks[i]][:-1],
                                 color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
-                                label=find_string_from_dict(ordered_list_of_stacks[i]))
+                                label=convert_grim_string(ordered_list_of_stacks[i], capitalise_first_letter=True))
             handles, labels = ax.get_legend_handles_labels()
             if n_plot >= columns:
                 ax.set_xlabel('Age', fontsize=base_font_size)
             if n_plot % columns == 0:
                 ax.set_ylabel('Proportion', fontsize=base_font_size)
             if n_plot == n_plots - 1:
-                ax.legend(handles, labels, bbox_to_anchor=(1.13, .8), loc=2, frameon=False, prop={'size': 9})
+                ax.legend(handles, labels, bbox_to_anchor=(1.25, .8), loc=2, frameon=False, prop={'size': 9})
             plt.setp(ax.get_xticklabels(), fontsize=base_font_size - 2)
             plt.setp(ax.get_yticklabels(), fontsize=base_font_size - 2)
+            ax.set_xlim(left=50., right=89.)
+            ax.set_ylim(bottom=0., top=1.)
             ax.set_title(year, fontsize=base_font_size + 2)
-            ax.set_xlim((50., 89.))
-            ax.set_ylim((0., 1.))
         plt.tight_layout()
         figure.savefig('lifetable')
 
