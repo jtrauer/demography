@@ -635,24 +635,14 @@ class Outputs:
         for gender in genders_to_plot:
             ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
             gender_string = convert_grim_string(gender) if split_by_gender else ''
-            iterations = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
-            colours = [plt.cm.Blues(x) for x in numpy.linspace(0., 1., iterations)]
-            year_values = self.data_object.grim_books_data['deaths']['years']
-            for i in range(5, iterations):
-                rates = self.data_object.rates['unadjusted'][i, :,
-                        self.data_object.grim_books_data['deaths']['genders'].index(gender),
-                        self.data_object.grim_sheets_to_read.index(cause)]
-                label = self.data_object.grim_books_data['deaths']['age_groups'][i]
-                ax.semilogy(year_values, rates, label=label, color=colours[i]) if log_scale \
-                    else ax.plot(year_values, rates, label=label, color=colours[i])
+            self.plot_rates_by_year(ax, cause, gender, log_scale)
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
             ax.set_title(gender_string)
             ax.set_ylim(y_limits)
             ax.set_xlim(x_limits)
-        plt.setp(ax.get_xticklabels(), fontsize=10)
-        plt.setp(ax.get_yticklabels(), fontsize=10)
+            ax.tick_params(labelsize=10)
         figure.savefig('mortality_figure_' + gender.lower())
 
     def plot_deaths_by_cause(self):
@@ -728,32 +718,58 @@ class Outputs:
         figure.savefig('lifetable')
 
     def plot_journal_figure(self):
+        """
+        Create figure for article to be submitted to journal.
+        """
 
-        gender = 'Persons'
+        # preliminaries for style
         figure = plt.figure()
-        cause = 'all-causes-combined'
         plt.style.use('ggplot')
         plt.tight_layout()
         y_limits = {0: (0., .24), 1: (4e-4, .26)}
 
+        # iterating over log axis and linear
         for n, log_scale in enumerate([False, True]):
+
+            # going down the right-hand panels
             ax = figure.add_subplot(2, 2, (n + 1) * 2)
-            iterations = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
-            colours = [plt.cm.Reds(x) for x in numpy.linspace(0., 1., iterations)]
-            year_values = self.data_object.grim_books_data['deaths']['years']
-            for i in range(5, iterations):
-                rates = self.data_object.rates['unadjusted'][i, :,
-                        self.data_object.grim_books_data['deaths']['genders'].index(gender),
-                        self.data_object.grim_sheets_to_read.index(cause)]
-                label = self.data_object.grim_books_data['deaths']['age_groups'][i]
-                ax.semilogy(year_values, rates, label=label, color=colours[i]) if log_scale \
-                    else ax.plot(year_values, rates, label=label, color=colours[i])
+
+            # plot each age group's rate against years
+            self.plot_rates_by_year(ax, 'all-causes-combined', 'Persons', log_scale)
+
+            # clean axis for journal article figure
             ax.set_xlim(left=1964., right=2014.)
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0f' % (y * 1e3)))
             ax.set_ylim(y_limits[n])
             ax.tick_params(labelsize=8)
             ax.tick_params(axis='y', rotation=90)
+
+        # save
         figure.savefig('journal_figure')
 
+    def plot_rates_by_year(self, ax, cause, gender, log_scale):
+        """
+        Plot a panel of death rates by age, either on log-scale or linear.
 
+        Args:
+            ax: The axis to be plotted to
+            cause: String for the cause of interest (usually just all-causes-combined)
+            gender: Gender of interest
+            log_scale: Whether to plot vertical axis on log-scale or linear
+        """
 
+        # number of age groups (note that last one is Missing, so has to be ignored)
+        n_age_groups = len(self.data_object.grim_books_data['deaths']['age_groups']) - 1
+
+        # initiate colours and x-values
+        colours = [plt.cm.Reds(x) for x in numpy.linspace(0., 1., n_age_groups)]
+        year_values = self.data_object.grim_books_data['deaths']['years']
+
+        # loop over age_groups and plot
+        for i in range(5, n_age_groups):
+            rates = self.data_object.rates['unadjusted'][
+                    i, :, self.data_object.grim_books_data['deaths']['genders'].index(gender),
+                    self.data_object.grim_sheets_to_read.index(cause)]
+            label = self.data_object.grim_books_data['deaths']['age_groups'][i]
+            ax.semilogy(year_values, rates, label=label, color=colours[i]) if log_scale \
+                else ax.plot(year_values, rates, label=label, color=colours[i])
