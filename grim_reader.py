@@ -751,7 +751,8 @@ class Outputs:
             ax.set_xlim(left=1964., right=2014.)
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0f' % (y * 1e3)))
             ax.set_ylim(y_limits[n])
-
+            ax.tick_params(labelsize=8)
+            ax.tick_params(axis='y', rotation=90)
         figure.savefig('journal_figure')
 
 
