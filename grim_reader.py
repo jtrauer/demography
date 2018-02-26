@@ -544,10 +544,7 @@ class Spring:
                 self.average_rates_by_year['standardised_adjusted_data'][upper_age_limit][cause] = []
                 for y in range(len(self.grim_books_data['deaths']['years'])):
                     self.average_rates_by_year['standardised_adjusted_data'][upper_age_limit][cause].append(
-                        sum([n / d * w for n, d, w in zip(
-                            self.grim_books_data['deaths']['adjusted_data'][:up, y, g, c],
-                            self.grim_books_data['population']['adjusted_data'][:up, y, g],
-                            age_weights[:up])]))
+                        sum([r * w for r, w in zip(self.rates['unadjusted'][:up, y, g, c], age_weights[:up])]))
 
     def find_life_tables(self, karup_king=True):
         """
