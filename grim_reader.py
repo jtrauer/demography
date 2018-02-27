@@ -688,7 +688,7 @@ class Outputs:
         for c, cause in enumerate(self.data_object.grim_sheets_to_read):
             years = self.data_object.grim_books_data['deaths']['years']
             data = self.data_object.average_rates_by_year['standardised_adjusted_data']['85+'][cause]
-            label = convert_grim_string(cause)
+            label = convert_grim_string(cause, capitalise_first_letter=True)
             ax1.plot(years, data, label=label, color=colours[c]['color'])
             ax2.semilogy(years, data, label=label, color=colours[c]['color'])
 
@@ -703,12 +703,17 @@ class Outputs:
 
         # clean axis for journal article figure
         y_limits = {0: (0., .012), 1: (7e-4, .012), 2: (0., .26), 3: (4e-4, .26)}
+        titles = {0: 'Death rates by cause', 2: 'Cardiovascular death rates by age group'}
         for a, ax in enumerate(figure.axes):
             ax.set_xlim(left=1964., right=2014.)
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0f' % (y * 1e3)))
             ax.set_ylim(y_limits[a])
             ax.tick_params(labelsize=8)
             ax.tick_params(axis='y', rotation=90)
+            if a in titles:
+                ax.set_title(titles[a], fontsize=8)
+            if a == 0:
+                ax.legend(fontsize=5.5)
 
         # save
         figure.savefig('journal_figure', dpi=1000)
@@ -749,6 +754,8 @@ class Outputs:
         n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 8, 25, 2014
         plt.style.use('ggplot')
         plt.tight_layout()
+        colours = [list(plt.rcParams['axes.prop_cycle'])[i] for i in [0, 2, 0, 1, 3]]
+
         for n_plot in range(n_plots):
             year = last_year + n_plot * year_spacing - (n_plots - 1) * year_spacing
             ax = figure.add_subplot(rows, columns, n_plot + 1)
@@ -768,8 +775,9 @@ class Outputs:
                 ax.fill_between(self.data_object.integer_ages,
                                 stacked_data[ordered_list_of_stacks[i - 1]][:-1],
                                 stacked_data[ordered_list_of_stacks[i]][:-1],
-                                color=list(plt.rcParams['axes.prop_cycle'])[i - 1]['color'],
-                                label=convert_grim_string(ordered_list_of_stacks[i], capitalise_first_letter=True))
+                                color=colours[i]['color'],
+                                label=convert_grim_string(ordered_list_of_stacks[i], capitalise_first_letter=True),
+                                alpha=0.7)
             handles, labels = ax.get_legend_handles_labels()
             if n_plot >= columns:
                 pass
