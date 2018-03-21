@@ -702,18 +702,23 @@ class Outputs:
             self.plot_rates_by_year(ax, 'all-causes-combined', 'Persons', log_scale)
 
         # clean axis for journal article figure
-        y_limits = {0: (0., .012), 1: (7e-4, .012), 2: (0., .26), 3: (4e-4, .26)}
+        y_limits = {0: (0., .012), 1: (7e-4, .012), 2: (0., .24), 3: (4e-4, .26)}
         titles = {0: 'Death rates by cause', 2: 'Cardiovascular death rates by age group'}
         for a, ax in enumerate(figure.axes):
             ax.set_xlim(left=1964., right=2014.)
-            ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0f' % (y * 1e3)))
             ax.set_ylim(y_limits[a])
-            ax.tick_params(labelsize=8)
+            ax.yaxis.set_major_formatter(ticker.FuncFormatter(lambda y, pos: '%.0f' % (y * 1e3)))
+            if a in [1, 3]:
+                ax.set_xlabel('Year', fontsize=6)
+            ax.set_ylabel('Deaths per thousand per year', fontsize=6)
+            ax.tick_params(labelsize=6)
             ax.tick_params(axis='y', rotation=90)
             if a in titles:
                 ax.set_title(titles[a], fontsize=8)
             if a == 0:
-                ax.legend(fontsize=5.5)
+                ax.legend(fontsize=6)
+            elif a == 2:
+                ax.legend(fontsize=4.8, ncol=1, bbox_to_anchor=(1.005, 1.))
 
         # save
         figure.savefig('journal_figure', dpi=1000)
@@ -751,7 +756,7 @@ class Outputs:
         """
 
         figure = plt.figure()
-        n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 8, 25, 2014
+        n_plots, rows, columns, base_font_size, year_spacing, last_year = 3, 2, 2, 6, 25, 2014
         plt.style.use('ggplot')
         plt.tight_layout()
         colours = [list(plt.rcParams['axes.prop_cycle'])[i] for i in [0, 2, 0, 1, 3]]
@@ -779,15 +784,11 @@ class Outputs:
                                 label=convert_grim_string(ordered_list_of_stacks[i], capitalise_first_letter=True),
                                 alpha=0.7)
             handles, labels = ax.get_legend_handles_labels()
-            if n_plot >= columns:
-                pass
-                # ax.set_xlabel('Age', fontsize=base_font_size)
-            if n_plot % columns == 0:
-                pass
-                # ax.set_ylabel('Proportion', fontsize=base_font_size)
+            ax.set_xlabel('Age', fontsize=base_font_size)
+            ax.set_ylabel('Cumulative proportion', fontsize=base_font_size)
             if n_plot == n_plots - 1:
-                ax.legend(handles, labels, bbox_to_anchor=(1.25, .8), loc=2, frameon=False, prop={'size': 9})
-            ax.tick_params(labelsize=8)
+                ax.legend(handles, labels, bbox_to_anchor=(1.36, .73), loc=2, prop={'size': 7})
+            ax.tick_params(labelsize=base_font_size)
             ax.set_xlim(left=50., right=89.)
             ax.set_ylim(bottom=0., top=1.)
             ax.set_title(year, fontsize=10)
