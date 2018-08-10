@@ -41,7 +41,7 @@ for year in range(2014, 2017):
         rate = cancer_deaths / population
         contribution = rate * aspree_weights[str(age) + ' ' + gender]
         weighted_rate += contribution
-    print('weighted_rate' + str(year))
+    print('\nWeighted rate in {} is:'.format(year))
     print(weighted_rate * 1e3)
 
 

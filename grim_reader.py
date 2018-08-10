@@ -638,19 +638,23 @@ class Outputs:
             output_type: Indicator of the data structure to access
         """
 
-        if output_type == 'unadjusted_rates':
+        if output_type == 'population':
+            data_structure_to_access = self.data_object.grim_books_data['population']['data']
+        elif output_type == 'unadjusted_rates':
             data_structure_to_access = self.data_object.rates['unadjusted']
-            sheet_index = self.data_object.grim_sheets_to_read.index(sheet)
         elif output_type == 'raw_deaths':
             data_structure_to_access = self.data_object.grim_books_data['deaths']['data']
-            sheet_index = self.data_object.grim_sheets_to_read.index(sheet)
-        elif output_type == 'population':
-            data_structure_to_access = self.data_object.grim_books_data['population']['data']
+
+        if output_type == 'population':
             sheet_index = None
+            year_index = self.data_object.grim_books_data['population']['years'].index(year)
+        else:
+            sheet_index = self.data_object.grim_sheets_to_read.index(sheet)
+            year_index = self.data_object.grim_books_data['deaths']['years'].index(year)
 
         result = data_structure_to_access[
             self.data_object.grim_books_data['deaths']['age_groups'].index(age_group)][
-            self.data_object.grim_books_data['deaths']['years'].index(year)][
+            year_index][
             self.data_object.grim_books_data['deaths']['genders'].index(gender)][
             sheet_index]
         return result[0] if type(result) == numpy.ndarray else result
