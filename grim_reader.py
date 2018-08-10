@@ -418,6 +418,20 @@ def karup_king_interpolation(group_index, within_group_index, last_age_group_ind
     return interpolated_estimate
 
 
+def convert_integer_age_to_string(age):
+    """
+    Convert integer age value to string to index lists of data object.
+
+    Args:
+        age: Integer value for age
+    """
+
+    if age < 85:
+        return str(age) + ' to ' + str(age + 4)
+    else:
+        return '85+'
+
+
 ''' objects '''
 
 
@@ -435,9 +449,8 @@ class Spring:
         """
 
         # specify spreadsheets to read and read them into single data structure - always put all-causes-combined first
-        self.grim_sheets_to_read = ['all-causes-combined', 'all-diseases-of-the-circulatory-system',
-                                    'all-neoplasms']
-        # 'all-certain-conditions-originating-in-the-perinatal-period',
+        self.grim_sheets_to_read = ['all-causes-combined', 'all-neoplasms']
+                                    # 'all-certain-conditions-originating-in-the-perinatal-period',
         # 'all-certain-infectious-and-parasitic-diseases',
         # 'all-diseases-of-the-circulatory-system',
         # 'all-congenital-malformations-deformations-and-chromosomal-abnormalities',
@@ -613,7 +626,36 @@ class Outputs:
 
         self.data_object = data_object
 
-    def plot_rates_by_age_group_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(2e-5, .18),
+    def get_rate(self, age_group, year, gender, sheet, output_type):
+        """
+        Simple method to access a particular element of the data arrays.
+
+        Args:
+            age_group: String representing the age group
+            year: Integer representing the year
+            gender: String representing the gender
+            sheet: String representing the data type or spreadsheet name
+            output_type: Indicator of the data structure to access
+        """
+
+        if output_type == 'unadjusted_rates':
+            data_structure_to_access = self.data_object.rates['unadjusted']
+            sheet_index = self.data_object.grim_sheets_to_read.index(sheet)
+        elif output_type == 'raw_deaths':
+            data_structure_to_access = self.data_object.grim_books_data['deaths']['data']
+            sheet_index = self.data_object.grim_sheets_to_read.index(sheet)
+        elif output_type == 'population':
+            data_structure_to_access = self.data_object.grim_books_data['population']['data']
+            sheet_index = None
+
+        result = data_structure_to_access[
+            self.data_object.grim_books_data['deaths']['age_groups'].index(age_group)][
+            self.data_object.grim_books_data['deaths']['years'].index(year)][
+            self.data_object.grim_books_data['deaths']['genders'].index(gender)][
+            sheet_index]
+        return result[0] if type(result) == numpy.ndarray else result
+
+    def plot_rates_by_age_group_over_time(self, cause='all-causes-combined', x_limits=None, y_limits=(0., 3e-4),
                                           log_scale=False, split_by_gender=True):
         """
         Create graph of total death rates by age groups over time.
@@ -639,10 +681,11 @@ class Outputs:
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
                       prop={'size': 7})
-            ax.set_title(gender_string)
+            # ax.set_title(gender_string)
             ax.set_ylim(y_limits)
             ax.set_xlim(x_limits)
             ax.tick_params(labelsize=10)
+            ax.set_title('Death rates due to liver disease by age group')
         figure.savefig('mortality_figure_' + gender.lower())
 
     def plot_deaths_by_cause(self):
@@ -659,18 +702,18 @@ class Outputs:
                 ax = figure.add_axes([0.1, 0.1, 0.6, 0.75])
                 for cause in self.data_object.grim_sheets_to_read:
                     ax.plot(self.data_object.grim_books_data['deaths']['years'],
-                            self.data_object.average_rates_by_year[analysis + 'adjusted_data'][upper_age_limit][cause],
+                            [1e5 * i for i in self.data_object.average_rates_by_year[analysis + 'adjusted_data'][upper_age_limit][cause]],
                             label=convert_grim_string(cause))
                 handles, labels = ax.get_legend_handles_labels()
-                ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
-                          prop={'size': 7})
-                ax.set_title('Death rates by cause' + upper_age_limit_string)
-                ax.set_xlim(left=1964., right=2014.)
-                ax.set_ylim(bottom=0., top=9e-3)
+                # ax.legend(handles, labels, bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., frameon=False,
+                #           prop={'size': 7})
+                ax.set_title('Deaths due to liver disease in Australia (source: AIHW)')
+                ax.set_xlim(left=1980., right=2016.)
+                ax.set_ylim(bottom=0., top=10)
                 ax.set_xlabel('Year', fontsize=10)
-                ax.set_ylabel('Rate per capita per year', fontsize=10)
+                ax.set_ylabel('Deaths per 100,000 per year', fontsize=10)
                 ax.tick_params(labelsize=8)
-                figure.savefig('mortality_figure_cause' + '_' + analysis + upper_age_limit_string)
+                figure.savefig('mortality_figure_cause' + '_' + analysis + upper_age_limit_string + '_')
 
     def plot_journal_figure_1(self):
         """
